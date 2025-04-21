@@ -29,7 +29,7 @@ static int nfile(const char *path, const struct stat *sb, int typeflag, struct F
         printf("This is a directory");
         if ((sb.st_mode & 0777) == 755)
         {
-            printf("Android directory");
+            printf("Android diretory");
         }
 
     }
