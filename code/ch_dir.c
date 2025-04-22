@@ -6,44 +6,78 @@
 #include <string.h>
 #include <ctype.h>
 #include <ftw.h>
+#include <glob.h>
+#define PATH_MAX 256
 
 int extension(const char *a);
 static int nfile(const char *path, const struct stat *sb, int typeflag, struct FTW *ftbuf);
+int pattern_check(const char *epath, int eerrno);
 
 int main(int argc, char **argv)
 {
     char buffer[256];
+
     if (argc < 2)
     {
         printf("Too much input\n");
     }
     sscanf(argv[1], "%255s", &buffer);
-
-    //scan_dir(argv[1]);
     
-    if (nftw(argv[1],nfile, 10, FTW_PHYS) == -1)
+    if (nftw(argv[1], nfile, 10, FTW_PHYS) == -1)
     {
         perror("nftw");
         return 1;
     }
+    
 }
 
 static int nfile(const char *path, const struct stat *sb, int typeflag, struct FTW *ftbuf)
 {
-    /*if (typeflag == FTW_D)
+    if (typeflag != FTW_F)
     {
-        printf("This is a directory\n");
-        printf("Directory: %s\n", path);
-        mode_t perms = sb->st_mode & 0777;
-        printf("Permission: %03o\n", perms);
+        return 0;
 
-    }*/
-    if (typeflag == FTW_F && extension(path))
+    }
+    glob_t check;
+   
+    /*char pattern[PATH_MAX];
+    snprintf(pattern, PATH_MAX-1, "%s/*.pdf", path);
+*/
+    int ret = glob("*.pdf", 0, NULL, &check);
+    if (ret == 0)
     {
+        for (size_t i = 0; i < check.gl_pathc; i++)
+        {
+            printf("File : %s", check.gl_pathv[i]);
+        }
+        globfree(&check);
+    }
+    else if (ret == GLOB_NOMATCH)
+    {
+        printf("No matching file\n");
+    }
+    else
+    {
+        printf("Glob failed\n");   
+    }
+   
+    /*if (typeflag == FTW_F)
+    {
+    
         printf("This is a file\n");
         printf("FILE: %s\n", path);
-    }
+    }*/
+    
     return 0;
+    
+}
+int pattern_check(const char *epath, int eerrno)
+{
+    if (epath == NULL)
+    {
+        printf("You made a mistake\n");
+        return(eerrno);
+    }
 }
 int extension(const char *a)
 {
