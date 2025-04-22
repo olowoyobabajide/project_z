@@ -38,7 +38,7 @@ static int nfile(const char *path, const struct stat *sb, int typeflag, struct F
         char base_path[PATH_MAX];
         snprintf(base_path, PATH_MAX-1, "%s", path);
 
-        if (fnmatch("*.config", basename(base_path), 0) == 0)
+        if (fnmatch("*.so", basename(base_path), 0) == 0)
         {
             printf("File: %s\n", path);
         }
