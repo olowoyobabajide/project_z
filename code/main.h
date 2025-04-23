@@ -11,10 +11,9 @@
 #include <fnmatch.h>
 #include <libgen.h>
 #define PATH_MAX 256
+int jide(char *a);
+//extern char buffer[PATH_MAX];
 
-extern static char buffer[PATH_MAX];
-
-void unzip_apk(char *apk);
 int apk_check(char *apk);
 static int nfile(const char *path, const struct stat *sb, int typeflag, struct FTW *ftbuf);
 

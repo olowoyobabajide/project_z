@@ -12,11 +12,16 @@
 
 int main(int argc, char **argv)
 {
-    char buffer[PATH_MAX];
+    static char buffer[PATH_MAX];
 
+    if (argc != 2)
+    {
+        printf("Too much output");
+        return 1;
+    }
     sscanf(argv[1], "%255s", &buffer);
+
     apk_check(buffer);
-
-    unzip_apk(basename(base_path));
-
+    jide(buffer);
+    
 }
