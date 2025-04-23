@@ -15,7 +15,7 @@ static int nfile(const char *path, const struct stat *sb, int typeflag, struct F
 
 int main(int argc, char **argv)
 {
-    char buffer[PATH_MAX];
+    extern static char buffer[PATH_MAX];
 
     sscanf(argv[1], "%255s", &buffer);
     apk_check(buffer);
@@ -38,12 +38,22 @@ static int nfile(const char *path, const struct stat *sb, int typeflag, struct F
         static char base_path[PATH_MAX];
         snprintf(base_path, PATH_MAX-1, "%s", path);
         char apk[PATH_MAX];
-        snprintf(apk, PATH_MAX-1, "unzip -j %s", basename(base_path));
+        snprintf(apk, PATH_MAX-1, "unzip %s -d temp", path);
 
         if (fnmatch("*.apk", basename(base_path), 0) == 0)
         {
-            printf("File: %s\n", path);
-            system(apk);
+            
+            if (sb->st_mode & 0740)
+            {
+                printf("File: %s\n", path);
+                system(apk);
+                
+            }
+            else
+            {
+                perror("Permission denied");
+                return EXIT_FAILURE;
+            }
         }
     }
     return 0; 

@@ -3,5 +3,5 @@
 
 int main(void)
 {
-    system("unzip -j /home/jyde/Music/MathGym.apk");
+    system("unzip /home/jyde/Music/MathGym.apk -d temp");
 }
