@@ -9,15 +9,19 @@ READ_EXTERNAL_STORAGE};*/
 int jide(char *a)
 {
     char temp[PATH_MAX];
-    snprintf(temp, PATH_MAX, "%s", a);
-    while (system(temp) != -1)
-    {
-        snprintf(temp, PATH_MAX, "grep -E  RECEIVE_SMS %s/AndroidManifest.xml", a);
-        if (system(temp))
-        {
-            printf("\nThis apk can receive sms \n");
-            return 0;
-        }
-    }
     
+    snprintf(temp, PATH_MAX, "grep 'jide' %s/temp/AndroidManifest.xml", a);
+    
+    if (system(temp) == -1)
+    {
+        printf("Can't find this\n");
+        return 1;
+    }
+    /*if (WIFSIGNALED(ret) && (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT))
+    {
+        break;
+    }*/
+    printf("\nThis Apk can receive files");
 }
+
+    

@@ -10,6 +10,7 @@
 #include <ftw.h>
 #include <fnmatch.h>
 #include <libgen.h>
+#include <sys/wait.h>
 #define PATH_MAX 256
 int jide(char *a);
 //extern char buffer[PATH_MAX];

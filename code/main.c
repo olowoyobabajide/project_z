@@ -1,14 +1,4 @@
 #include "main.h"
-#define _XOPEN_SOURCE 500
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/stat.h>
-#include <string.h>
-#include <ctype.h>
-#include <ftw.h>
-#include <fnmatch.h>
-#include <libgen.h>
-#define PATH_MAX 256
 
 int main(int argc, char **argv)
 {
@@ -16,12 +6,17 @@ int main(int argc, char **argv)
 
     if (argc != 2)
     {
-        printf("Too much output");
-        return 1;
+        printf("Insufficient or too much input\n");
+        printf("Try 'main /path/to/folder\n'");
+        return EXIT_FAILURE;
     }
     sscanf(argv[1], "%255s", &buffer);
 
-    apk_check(buffer);
+    if (apk_check(buffer) == -1)
+    {
+        printf("NFTW\n");
+        return 1;
+    }
     jide(buffer);
     
 }
