@@ -10,18 +10,21 @@ int jide(char *a)
 {
     char temp[PATH_MAX];
     
-    snprintf(temp, PATH_MAX, "grep 'jide' %s/temp/AndroidManifest.xml", a);
+    //snprintf(temp, PATH_MAX, "grep 'jide' %s/temp/AndroidManifest.xml", a);
     
-    if (system(temp) == -1)
-    {
-        printf("Can't find this\n");
-        return 1;
-    }
-    /*if (WIFSIGNALED(ret) && (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT))
-    {
-        break;
-    }*/
-    printf("\nThis Apk can receive files");
-}
+    FILE *jide;
 
-    
+    if ((jide = fopen("AndroidManifest.xml", "rb")) == NULL)
+    {
+        printf("Could not open file\n");
+    }
+
+    while(fgets(temp, PATH_MAX-1, jide) != NULL)
+    {
+        {
+            char *s = strstr(temp, "RECORD_AUDIO");
+            printf("%s\n", s);
+        }
+        fclose(jide);
+    }
+}

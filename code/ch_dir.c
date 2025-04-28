@@ -37,7 +37,7 @@ static int nfile(const char *path, const struct stat *sb, int typeflag, struct F
             if (sb->st_mode & 0740)
             {
                 printf("File: %s\n", path);
-                if (system(apk) == 1)
+                if (system(apk) == -1)
                 {
                     printf("Failed to unzip\n");
                 }
