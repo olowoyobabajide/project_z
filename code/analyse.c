@@ -13,24 +13,27 @@ int jide(char *a)
     //snprintf(temp, PATH_MAX, "grep 'jide' %s/temp/AndroidManifest.xml", a);
     
     FILE *jide;
-
     if ((jide = fopen("AndroidManifest.xml", "rb")) == NULL)
     {
         printf("Could not open file\n");
     }
 
+    printf("[Manifest Scan]\n");
+
     while(fgets(temp, PATH_MAX-1, jide) != NULL)
     {
         {
+            
             char *s;
+
             if((s = strstr(temp, "RECORD_AUDIO")) != NULL || (s = strstr(temp, "VIBRATE")) != NULL)
             {
                 printf("These are low level permission threats\n");
-                printf("%s\n", temp);
+                printf("Permission: %s\n ", strtok(s, "\"/>"));
             }
             if((s = strstr(temp, "WRITE_EXTERNAL_STORAGE")) != NULL)
             {
-                printf("%s\n", temp);
+                printf("%s\n ", temp);
             }          
         }
     }
