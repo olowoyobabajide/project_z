@@ -15,7 +15,7 @@ static int nfile(const char *path, const struct stat *sb, int typeflag, struct F
 
 int apk_check(char *apk)
 {
-    if (nftw(apk, nfile, 10, FTW_PHYS) == -1)
+    if (nftw(apk, nfile, 5, FTW_PHYS) == -1)
     {
         perror("nftw");
         return EXIT_FAILURE;
@@ -29,7 +29,7 @@ static int nfile(const char *path, const struct stat *sb, int typeflag, struct F
         char base_path[PATH_MAX];
         snprintf(base_path, PATH_MAX-1, "%s", path);
         char apk[PATH_MAX];
-        snprintf(apk, PATH_MAX-1, "unzip %s -d temp", path);
+        snprintf(apk, PATH_MAX-1, "apktool d %s -o temp", path);
 
         if (fnmatch("*.apk", basename(base_path), 0) == 0)
         {

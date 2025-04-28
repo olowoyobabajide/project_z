@@ -22,13 +22,17 @@ int jide(char *a)
     while(fgets(temp, PATH_MAX-1, jide) != NULL)
     {
         {
-            char *s = strstr(temp, "RECORD_AUDIO");
-            if(s)
+            char *s;
+            if((s = strstr(temp, "RECORD_AUDIO")) != NULL || (s = strstr(temp, "VIBRATE")) != NULL)
             {
-                printf("This apk can record audio");
-                printf("%s", s);
-            }            
+                printf("These are low level permission threats\n");
+                printf("%s\n", temp);
+            }
+            if((s = strstr(temp, "WRITE_EXTERNAL_STORAGE")) != NULL)
+            {
+                printf("%s\n", temp);
+            }          
         }
-        fclose(jide);
     }
+    fclose(jide);
 }
