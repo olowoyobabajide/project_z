@@ -23,7 +23,11 @@ int jide(char *a)
     {
         {
             char *s = strstr(temp, "RECORD_AUDIO");
-            printf("%s\n", s);
+            if(s)
+            {
+                printf("This apk can record audio");
+                printf("%s", s);
+            }            
         }
         fclose(jide);
     }
