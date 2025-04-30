@@ -10,13 +10,14 @@ READ CONTACTS, WRITE_CONTACTS, ACCESS_FINE_LOCATION, INTERNET, SYSTEM_ALERT_WIND
 READ_EXTERNAL_STORAGE};*/
 
 typedef struct{
-    char *low;
+    char low[PATH_MAX];
 }pers;
 
 int jide(char *a)
 {
     char temp[PATH_MAX];
     
+    pers mypers;
     //snprintf(temp, PATH_MAX, "grep 'jide' %s/temp/AndroidManifest.xml", a);
     
     FILE *jide;
@@ -24,19 +25,17 @@ int jide(char *a)
     {
         printf("Could not open file\n");
     }
-
+    //mypers.low = malloc(PATH_MAX);
     printf("[Manifest Scan...]\n");
-    //pers->low = {" "};
     while(fgets(temp, PATH_MAX-1, jide) != NULL)
     {
         char *s;
-        char put[PATH_MAX];
         if((s = strstr(temp, "RECORD_AUDIO")) != NULL || (s = strstr(temp, "VIBRATE")) != NULL)
         {
-            printf("These are low level permission threats\n");
-            pers->low = snprintf(put, PATH_MAX-1, "%s\n ", strtok(s, "\"/>"));
+            snprintf(mypers.low, PATH_MAX-1, "%s", strtok(s, "\"/>"));
         }
     }
-    printf("Permissions: %s", pers->low);
+    printf("These are low level permission threats\n");
+    printf("Permissions: %s", mypers.low);
     fclose(jide);
 }
