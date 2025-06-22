@@ -32,7 +32,11 @@ int jide(char *a)
         char *s;
         if((s = strstr(temp, "RECORD_AUDIO")) != NULL || (s = strstr(temp, "VIBRATE")) != NULL)
         {
-            snprintf(mypers.low, PATH_MAX-1, "%s", strtok(s, "\"/>"));
+            for(int i = 0; i < PATH_MAX; i++)
+            {
+                char *tok = strtok(s, "\"/>");
+                snprintf(mypers.low, PATH_MAX-1, "%s", tok[i]);
+            }
         }
     }
     printf("These are low level permission threats\n");
