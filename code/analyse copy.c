@@ -11,17 +11,34 @@ const char *permission[] = {"android.permission.SEND_SMS", "android.permission.R
 
 int analyse_per(char *a)
 {
-    char perm[PATH_MAX];
-    FILE *AndroidManifest;
-
-    if ((AndroidManifest = fopen("AndroidManifest.xml", "rb")) == NULL)
+    char temp[PATH_MAX];
+    
+ 
+    //snprintf(temp, PATH_MAX, "grep 'jide' %s/temp/AndroidManifest.xml", a);
+    FILE *jide;
+    if((jide = fopen("AndroidManifest.xml", "rb")) == NULL)
     {
-        printf("The AndroidManifest file could not be open");
+        printf("Could not open file\n");
     }
-    while(fgets(perm, PATH_MAX-1, AndroidManifest) != NULL)
-    {
-       printf("%s", strstr(perm, "uses-permission"));
-    }
+    
+    printf("[Manifest Scan...]\n");
 
-    fclose(AndroidManifest);
+    char *s;
+    FILE *test = fopen("low_perm.txt", "rw");
+    while(fgets(temp, PATH_MAX-1, jide))
+    {
+        s = strstr(temp, "<uses-permission");
+        
+        if (s)
+        { 
+            char *store
+            fgets(store, 255, s);
+        }
+    }
+    fclose(jide);
+    fclose(test);
+    printf("These are low level permission threats\n");
+    
+    
+
 }

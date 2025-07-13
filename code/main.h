@@ -12,7 +12,7 @@
 #include <libgen.h>
 #include <sys/wait.h>
 #define PATH_MAX 256
-int jide(char *a);
+int analyse_per(char *a);
 //extern char buffer[PATH_MAX];
 
 int apk_check(char *apk);

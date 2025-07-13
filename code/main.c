@@ -17,6 +17,6 @@ int main(int argc, char **argv)
         printf("NFTW\n");
         return 1;
     }*/
-    jide(buffer);
+    analyse_per(buffer);
     
 }
