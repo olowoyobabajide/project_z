@@ -1,3 +1,5 @@
 /temp
+/test
 *.xml
 test.c
+*.txt
