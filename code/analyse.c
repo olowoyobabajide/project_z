@@ -19,44 +19,51 @@ int analyse_per(char *a)
     {
         perror("The AndroidManifest file could not be open");
     }
-    /*if ((permission = fopen("permission.txt", "a")) == NULL)
-    {
-        perror("Could not open this file");
-    }
-    /*if ((activity = fopen("activity.txt", "a")) == NULL || (service = fopen("services.txt", "a")) == NULL
-|| (receiver = fopen("receiver.txt", "a")) == NULL || (provider = fopen("provider.txt", "a")) == NULL)
-    {
-        perror("Could not open the file");
-    }*/
     char *s, *app, *act, *ser, *rec, *prov;
     while(fgets(perm, PATH_MAX-1, AndroidManifest))
     {
         
-        if ((s = strstr(perm, "uses-permission")) != NULL && (permission = fopen("permission.txt", "a")) != NULL)
+        if (strstr(perm, "uses-permission")!= NULL && (permission = fopen("permission.txt", "a+")) != NULL)
         {
-            fprintf(permission, "%s", s);
+            fprintf(permission, "%s", perm);
+            fclose(permission);
         }
-        if ((act = strstr(perm, "activity")) != NULL && (activity = fopen("activity.txt", "a")) != NULL)
+        if (strstr(perm, "activity") != NULL && (activity = fopen("activity.txt", "a+")) != NULL)
         {
             fprintf(activity, "%s", perm);
+            fclose(activity);
         }
-        if (strstr(perm, "service") != NULL && (service = fopen("services.txt", "a")) != NULL)
+        if (strstr(perm, "service") != NULL && (service = fopen("services.txt", "a+")) != NULL)
         {
             fprintf(service, "%s", perm);
+            fclose(service);
         }
-        if (strstr(perm, "receiver") != NULL && (receiver = fopen("receiver.txt", "a")) != NULL)
+        if (strstr(perm, "receiver") != NULL && (receiver = fopen("receiver.txt", "a+")) != NULL)
         {
-            fprintf(service, "%s", perm);
+            fprintf(receiver, "%s", perm);
+            fclose(receiver);
         }
-        if ((prov = strstr(perm, "provider")) != NULL && (provider = fopen("providers.txt", "a")) != NULL)
+        if (strstr(perm, "provider") != NULL && (provider = fopen("providers.txt", "a+")) != NULL)
         {
-            fprintf(service, "%s", prov);
+            fprintf(provider, "%s", perm);
+            fclose(provider);
         }
-        if ((app = strstr(perm, "application")) != NULL && (application = fopen("app.txt", "a")) != NULL)
+        if (strstr(perm, "application") != NULL && (application = fopen("app.txt", "a+")) != NULL)
         {
-            fprintf(service, "%s", app);
+            fprintf(application, "%s", perm);
+            fclose(application);
         }
     }
-
+    
     fclose(AndroidManifest);
 }
+
+
+// void analyse_perm(char *a)
+//     FILE *file = fopen("a", "rb");
+
+//     if (a == "permission.txt")
+//     {
+//         if 
+//     }
+// }
