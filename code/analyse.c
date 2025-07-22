@@ -59,11 +59,31 @@ int analyse_per(char *a)
 }
 
 
-// void analyse_perm(char *a)
-//     FILE *file = fopen("a", "rb");
+void tag_check(char *a){
+    FILE *file = fopen(a, "rb");
+    char perm[PATH_MAX];
 
-//     if (a == "permission.txt")
-//     {
-//         if 
-//     }
-// }
+    if (file == NULL)
+    {
+        perror("File could not be read\n");
+    }
+    char *ptr = perm;
+    if ((strcmp(a, "permission.txt")) == 0)
+    {
+        while(fgets(perm, PATH_MAX-1, file))
+        {
+                ptr = strstr(perm, "android:name=\"");
+                ptr += 14;
+                char *end;
+                if (end = strchr(ptr, '"'))
+                {
+                    end = strchr(ptr, '"');
+                     end = '\0';
+                     printf("%s", ptr);
+                }
+                //printf("%s", ptr);
+                ptr -= 14;
+        }
+    }
+    fclose(file);
+}

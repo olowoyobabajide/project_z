@@ -1,5 +1,6 @@
 #include "main.h"
 
+void tag_check(char *a);
 int main(int argc, char **argv)
 {
     static char buffer[PATH_MAX];
@@ -17,6 +18,8 @@ int main(int argc, char **argv)
         printf("NFTW\n");
         return 1;
     }*/
-    analyse_per(buffer);
+    //analyse_per(buffer);
+    char *a = "permission.txt";
+    tag_check(a);
     
 }
