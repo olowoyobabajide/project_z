@@ -19,4 +19,5 @@ void tag_check(char *a);
 int apk_check(char *apk);
 static int nfile(const char *path, const struct stat *sb, int typeflag, struct FTW *ftbuf);
 
+
 #endif

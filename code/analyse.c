@@ -3,11 +3,10 @@
 /*
 Over here we analyse the android manifest file for risky permissions and flags
 */
-
+#define keep 10000
 const char *permission[18] = {"android.permission.SEND_SMS", "android.permission.READ_SMS", "android.permission.RECEIVE_SMS ", "android.permission.CALL_PHONE", "android.permission.READ_CALL_LOG", "android.permission.WRITE_CALL_LOG", "android.permission.RECORD_AUDIO", "android.permission.CAMERA",
 "android.permission.READ_CONTACTS", "android.permission.WRITE_CONTACTS", "android.permission.ACCESS_FINE_LOCATION","android.permission.ACCESS_COARSE_LOCATION", "android.permission.INTERNET", "android.permission.SYSTEM_ALERT_WINDOW ", "android.permission.REQUEST_INSTALL_PACKAGES",
 "android.permission.INSTALL_PACKAGES", "android.permission.READ_EXTERNAL_STORAGE", "android.permission.WRITE_EXTERNAL_STORAGE"};
-
 
 int analyse_per(char *a)
 {
@@ -61,17 +60,17 @@ int analyse_per(char *a)
 
 void tag_check(char *a)
 {
-    const char *permission[18] = {"android.permission.SEND_SMS", "android.permission.READ_SMS", "android.permission.RECEIVE_SMS ", "android.permission.CALL_PHONE", "android.permission.READ_CALL_LOG", "android.permission.WRITE_CALL_LOG", "android.permission.RECORD_AUDIO", "android.permission.CAMERA",
-"android.permission.READ_CONTACTS", "android.permission.WRITE_CONTACTS", "android.permission.ACCESS_FINE_LOCATION","android.permission.ACCESS_COARSE_LOCATION", "android.permission.INTERNET", "android.permission.SYSTEM_ALERT_WINDOW ", "android.permission.REQUEST_INSTALL_PACKAGES",
-"android.permission.INSTALL_PACKAGES", "android.permission.READ_EXTERNAL_STORAGE", "android.permission.WRITE_EXTERNAL_STORAGE"};
+    
     FILE *file = fopen(a, "rb");
-    FILE *log = fopen("log.txt", "w");
+    FILE *log;
     char perm[PATH_MAX];
 
     if (file == NULL)
     {
         perror("File could not be read\n");
     }
+    char *header_perm = "Pemission";
+    char *footer_perm = "\nRisk Level: DAngerous\nReason:allows this and that(just testing)";
     char *ptr = perm;
     if ((strcmp(a, "permission.txt")) == 0)
     {
@@ -89,15 +88,25 @@ void tag_check(char *a)
                 if (end = strchr(ptr, '"'))
                 {
                     *end = '\0';
-                    printf("%s\n", ptr);
+                    //printf("%s", ptr);
                     for (int i = 0; i < 13; i++)
                     {
                         if (strcmp(permission[i], ptr)== 0)
                         {
-                            char *temp;
-                            snprintf(temp, PATH_MAX-1, "Permission: %s\nRisk Level: DANGEROUS\nReason: Accesses user's info\n ------", permission[i]);
+                            if ((log = fopen("log.txt", "w")) == NULL)
+                            {
+                                perror("No log file");
+                            }
+                            char temp[keep];
+                            memcpy(temp, header_perm, strlen(header_perm));
+                            memcpy(temp, permission[i], strlen(permission[i])+1);
+                            memcpy(temp, footer_perm, strlen(footer_perm));
+
+                            //snprintf(temp, PATH_MAX-1, "%s", j);
+                            fprintf(log, "permission: %s\n", temp);
+                            //fclose(log);
                             
-                            printf("yes\n");
+                            //fwrite(temp, sizeof(char), strlen(permission[i]), log);
                         }
                     }
                 }
