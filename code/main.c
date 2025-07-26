@@ -1,6 +1,6 @@
 #include "main.h"
 
-void tag_check(char *a);
+void tag_perm(char *a);
 int main(int argc, char **argv)
 {
     static char buffer[PATH_MAX];
@@ -20,6 +20,6 @@ int main(int argc, char **argv)
     }*/
     //analyse_per(buffer);
     char *a = "permission.txt";
-    tag_check(a);
+    tag_perm(a);
     
 }

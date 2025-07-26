@@ -4,9 +4,11 @@
 Over here we analyse the android manifest file for risky permissions and flags
 */
 #define keep 10000
+char* replace_str(const char *r);
 const char *permission[18] = {"android.permission.SEND_SMS", "android.permission.READ_SMS", "android.permission.RECEIVE_SMS ", "android.permission.CALL_PHONE", "android.permission.READ_CALL_LOG", "android.permission.WRITE_CALL_LOG", "android.permission.RECORD_AUDIO", "android.permission.CAMERA",
 "android.permission.READ_CONTACTS", "android.permission.WRITE_CONTACTS", "android.permission.ACCESS_FINE_LOCATION","android.permission.ACCESS_COARSE_LOCATION", "android.permission.INTERNET", "android.permission.SYSTEM_ALERT_WINDOW ", "android.permission.REQUEST_INSTALL_PACKAGES",
 "android.permission.INSTALL_PACKAGES", "android.permission.READ_EXTERNAL_STORAGE", "android.permission.WRITE_EXTERNAL_STORAGE"};
+
 
 int analyse_per(char *a)
 {
@@ -58,7 +60,7 @@ int analyse_per(char *a)
 }
 
 
-void tag_check(char *a)
+void tag_perm(char *a)
 {
     
     FILE *file = fopen(a, "rb");
@@ -69,44 +71,77 @@ void tag_check(char *a)
     {
         perror("File could not be read\n");
     }
-    char *header_perm = "Pemission";
-    char *footer_perm = "\nRisk Level: DAngerous\nReason:allows this and that(just testing)";
+    char *header_perm = "Pemission: "; 
+    char *dang_perm = "\nRisk Level: Dangerous\nReason: Allows this and that(just testing)\n--------\n";
+    char *mid_perm = "\nRisk Level: Moderarately\nReason: Allows this and that(just testing)\n--------\n";
+    char *low_perm = "\nRisk Level: Low-level\nReason: Allows this and that(just testing)\n--------\n";
     char *ptr = perm;
-    if ((strcmp(a, "permission.txt")) == 0)
+    //if ((strcmp(a, "permission.txt")) == 0) to be used in a different file
+    //checks if the file is permission.txt
+    while(fgets(perm, PATH_MAX-1, file))
     {
-        while(fgets(perm, PATH_MAX-1, file))
+        //reads the file line by line
+        if (strstr(perm, "android:name=\"") == NULL)
         {
-            if (strstr(perm, "android:name=\"") == NULL)
+            perror("\"android.name\" could not be found");
+        }
+        else
+        {
+            
+            ptr = strstr(perm, "android:name=\"");//returns a pointer to the character after android.nam...
+            ptr += 14;
+            char *end;
+            if (end = strchr(ptr, '"'))
             {
-                perror("\"android.name\" could not be found");
-            }
-            else
-            {
-                ptr = strstr(perm, "android:name=\"");
-                ptr += 14;
-                char *end;
-                if (end = strchr(ptr, '"'))
+                //splits it off at the end 
+                *end = '\0';
+                //printf("%s", ptr);
+                for (int i = 0; i < 13; i++)
                 {
-                    *end = '\0';
-                    //printf("%s", ptr);
-                    for (int i = 0; i < 13; i++)
+                    if ((log = fopen("log.txt", "a+")) == NULL)
                     {
-                        if (strcmp(permission[i], ptr)== 0)
+                        perror("No log file");
+                    }
+                    if (strcmp(permission[i], ptr)== 0)
+                    {
+                        
+                        int offset = 0;
+                        char temp[keep];
+                        if(i >= 0 && i < 10)
                         {
-                            if ((log = fopen("log.txt", "w")) == NULL)
-                            {
-                                perror("No log file");
-                            }
-                            char temp[keep];
-                            memcpy(temp, header_perm, strlen(header_perm));
-                            memcpy(temp, permission[i], strlen(permission[i])+1);
-                            memcpy(temp, footer_perm, strlen(footer_perm));
-
-                            //snprintf(temp, PATH_MAX-1, "%s", j);
-                            fprintf(log, "permission: %s\n", temp);
-                            //fclose(log);
+                            memcpy(temp + offset, header_perm, strlen(header_perm));
+                            offset += strlen(header_perm);
+                            memcpy(temp + offset, permission[i], strlen(permission[i]));
+                            offset += strlen(permission[i]);
+                            memcpy(temp + offset, dang_perm, strlen(dang_perm));
+                            offset += strlen(dang_perm);
                             
-                            //fwrite(temp, sizeof(char), strlen(permission[i]), log);
+                            fwrite(temp, sizeof(char), offset, log);
+                            fclose(log);
+                        }
+                        if(i >= 10 && i < 15)
+                        {
+                            memcpy(temp + offset, header_perm, strlen(header_perm));
+                            offset += strlen(header_perm);
+                            memcpy(temp + offset, permission[i], strlen(permission[i]));
+                            offset += strlen(permission[i]);
+                            memcpy(temp + offset, mid_perm, strlen(mid_perm));
+                            offset += strlen(mid_perm);
+                            
+                            fwrite(temp, sizeof(char), offset, log);
+                            fclose(log);
+                        }
+                        if(i >= 15)
+                        {
+                            memcpy(temp + offset, header_perm, strlen(header_perm));
+                            offset += strlen(header_perm);
+                            memcpy(temp + offset, permission[i], strlen(permission[i]));
+                            offset += strlen(permission[i]);
+                            memcpy(temp + offset, low_perm, strlen(low_perm));
+                            offset += strlen(low_perm);
+                            
+                            fwrite(temp, sizeof(char), offset, log);
+                            fclose(log);
                         }
                     }
                 }
