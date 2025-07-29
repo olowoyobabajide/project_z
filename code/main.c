@@ -18,8 +18,8 @@ int main(int argc, char **argv)
         printf("NFTW\n");
         return 1;
     }*/
-    //analyse_per(buffer);
-    char *a = "permission.txt";
-    tag_perm(a);
+    analyse_per(buffer);
+    //char *a = "permission.txt";
+    //tag_perm(a);
     
 }
