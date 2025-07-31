@@ -5,7 +5,7 @@ int main(int argc, char **argv)
 {
     static char buffer[PATH_MAX];
 
-    if (argc != 2)
+    if(argc != 2)
     {
         printf("Insufficient or too much input\n");
         printf("Try './main /path/to/folder\n'");
@@ -18,8 +18,9 @@ int main(int argc, char **argv)
         printf("NFTW\n");
         return 1;
     }*/
-    analyse_per(buffer);
+    //analyse_per(buffer);//for checking permissions in permission.txt
     //char *a = "permission.txt";
     //tag_perm(a);
+    tag_act("activity.txt");
     
 }

@@ -13,19 +13,9 @@
 #include <sys/wait.h>
 #define PATH_MAX 256
 int analyse_per(char *a);
-char* replace_str(char *r);
+int tag_act(char *a);
 void tag_perm(char *a);
 int apk_check(char *apk);
-static int nfile(const char *path, const struct stat *sb, int typeflag, struct FTW *ftbuf);
-
-char* replace_str(char *r)
-{
-
-    if(r == "android.permission.camera")
-    { 
-        char *a = "\nRisk Level: Dangerous\nReason: Allows this and that(just testing)\n"; 
-        return a;
-    }
-}
+//static int nfile(const char *path, const struct stat *sb, int typeflag, struct FTW *ftbuf);
 
 #endif

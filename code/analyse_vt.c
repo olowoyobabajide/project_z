@@ -5,7 +5,6 @@
 Over here we analyse the android manifest file for risky permissions and flags
 */
 #define keep 10000
-char* replace_str(const char *r);
 const char *permission[24] = {" ","android.permission.READ_SMS","android.permission.SEND_SMS","android.permission.RECEIVE_SMS",
 "android.permission.READ_CONTACTS","android.permission.WRITE_CONTACTS","android.permission.GET_ACCOUNTS",
 "android.permission.RECORD_AUDIO","android.permission.CAMERA","android.permission.READ_PHONE_STATE",
@@ -20,16 +19,20 @@ typedef struct tag{
     char *tag;
     char *f_tag;
 }tag;
+typedef struct reason_perms{
+    char *name;
+    char *level;
+}rperm;
+
 int analyse_per(char *a)
 {
     char perm[PATH_MAX];
     bool inside_block = false;
     FILE *AndroidManifest;
-    //FILE *permission,*activity, *service, *receiver, *provider, *application;
     FILE *file_point[6];
     tag tags[] = {{"uses-permission", "permission.txt"}, {"activity", "activity.txt"}, {"service", "services.txt"},
-    {"receiver", "receiver.txt"}, {"provider", "providers.txt"}, {"application", "app.txt"}
-};
+    {"receiver", "receiver.txt"}, {"provider", "providers.txt"}, {"application", "app.txt"}};
+
     if ((AndroidManifest = fopen("AndroidManifest.xml", "rb")) == NULL)
     {
         perror("The AndroidManifest file could not be open");
@@ -43,16 +46,33 @@ int analyse_per(char *a)
             {
                 fprintf(file_point[i], "%s", perm);
                 fclose(file_point[i]);
+
             }
+            if(strstr(perm, "<intent-filter>")){
+                file_point[i]=fopen(tags[i].f_tag, "a+");
+                inside_block = true;
+                fprintf(file_point[i], "%s", perm);
+                fclose(file_point[i]);
+                continue;
+            } 
+            if(inside_block)
+            {
+                file_point[i]=fopen(tags[i].f_tag, "a+");
+                fprintf(file_point[i], "%s", perm);
+                if(strstr(perm, "</intent-filter>"))
+                {
+                    inside_block = false;
+                }
+                fclose(file_point[i]);
+            }
+            
         }
+
     }
     fclose(AndroidManifest);
 }
 
-typedef struct reason_perms{
-    char *name;
-    char *level;
-}rperm;
+
 void tag_perm(char *a)
 {
     
