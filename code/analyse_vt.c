@@ -16,67 +16,36 @@ const char *permission[24] = {" ","android.permission.READ_SMS","android.permiss
 "android.permission.VIBRATE","android.permission.WAKE_LOCK","android.permission.RECEIVE_BOOT_COMPLETED"};
 
 
+typedef struct tag{
+    char *tag;
+    char *f_tag;
+}tag;
 int analyse_per(char *a)
 {
     char perm[PATH_MAX];
     bool inside_block = false;
     FILE *AndroidManifest;
-    FILE *permission,*activity, *service, *receiver, *provider, *application;
-    
+    //FILE *permission,*activity, *service, *receiver, *provider, *application;
+    FILE *file_point[6];
+    tag tags[] = {{"uses-permission", "permission.txt"}, {"activity", "activity.txt"}, {"service", "services.txt"},
+    {"receiver", "receiver.txt"}, {"provider", "providers.txt"}, {"application", "app.txt"}
+};
     if ((AndroidManifest = fopen("AndroidManifest.xml", "rb")) == NULL)
     {
         perror("The AndroidManifest file could not be open");
         return EXIT_FAILURE;
     }
-    char *s, *app, *act, *ser, *rec, *prov;
     while(fgets(perm, PATH_MAX-1, AndroidManifest))
     {
-        
-        if (strstr(perm, "uses-permission")!= NULL && (permission = fopen("permission.txt", "a+")) != NULL)
+        for(int i = 0; i < 6; i++)
         {
-            fprintf(permission, "%s", perm);
-            fclose(permission);
-        }
-        if (strstr(perm, "activity") != NULL && (activity = fopen("activity.txt", "a+")) != NULL)
-        {
-            fprintf(activity, "%s", perm);
-        
-        }
-        if(strstr(perm, "<intent-filter>")){
-            inside_block = true;
-            fprintf(activity, "%s", perm);
-            continue;
-        } 
-        if(inside_block)
-        {
-            fprintf(activity, "%s", perm);
-            if(strstr(perm, "</intent-filter>"))
+            if(strstr(perm, tags[i].tag) != NULL && (file_point[i] = fopen(tags[i].f_tag, "a+")) != NULL)
             {
-                inside_block = false;
+                fprintf(file_point[i], "%s", perm);
+                fclose(file_point[i]);
             }
         }
-        if (strstr(perm, "service") != NULL && (service = fopen("services.txt", "a+")) != NULL)
-        {
-            fprintf(service, "%s", perm);
-            fclose(service);
-        }
-        if (strstr(perm, "receiver") != NULL && (receiver = fopen("receiver.txt", "a+")) != NULL)
-        {
-            fprintf(receiver, "%s", perm);
-            fclose(receiver);
-        }
-        if (strstr(perm, "provider") != NULL && (provider = fopen("providers.txt", "a+")) != NULL)
-        {
-            fprintf(provider, "%s", perm);
-            fclose(provider);
-        }
-        if (strstr(perm, "application") != NULL && (application = fopen("app.txt", "a+")) != NULL)
-        {
-            fprintf(application, "%s", perm);
-            fclose(application);
-        }
     }
-    fclose(activity);
     fclose(AndroidManifest);
 }
 
