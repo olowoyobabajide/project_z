@@ -1,16 +1,10 @@
 #include "main.h"
 #include <stdbool.h>
-#include <libxml/parser.h> 
-#include <libxml/tree.h>
-
-//gcc main.c analyse.c -o fs $(pkg-config --cflags --libs libxml-2.0)  compiling
-
 //extern char buffer[PATH_MAX];
 /*
 Over here we analyse the android manifest file for risky permissions and flags
 */
 #define keep 10000
-
 const char *permission[24] = {" ","android.permission.READ_SMS","android.permission.SEND_SMS","android.permission.RECEIVE_SMS",
 "android.permission.READ_CONTACTS","android.permission.WRITE_CONTACTS","android.permission.GET_ACCOUNTS",
 "android.permission.RECORD_AUDIO","android.permission.CAMERA","android.permission.READ_PHONE_STATE",
@@ -19,126 +13,66 @@ const char *permission[24] = {" ","android.permission.READ_SMS","android.permiss
 "android.permission.WRITE_EXTERNAL_STORAGE","android.permission.INTERNET","android.permission.SYSTEM_ALERT_WINDOW",
 "android.permission.BIND_ACCESSIBILITY_SERVICE","android.permission.REQUEST_INSTALL_PACKAGES",
 "android.permission.VIBRATE","android.permission.WAKE_LOCK","android.permission.RECEIVE_BOOT_COMPLETED"};
-int *parsetag(xmlDocPtr doc, xmlNodePtr cur);
-void parsedoc(char *xmlfile, int(*xmlfunc)(xmlDocPtr, xmlNodePtr));
 
 
 typedef struct tag{
-    //A struct for the the tags activity, services...
     char *tag;
     char *f_tag;
 }tag;
 typedef struct reason_perms{
-    //This struct details about the permissions found
     char *name;
     char *level;
 }rperm;
 
-
-int *parsetag(xmlDocPtr doc, xmlNodePtr cur)
-{
-    //parsing the tag. Checking for each nested node under <application>
-    xmlBufferPtr buf = xmlBufferCreate();
-    FILE *file[4];
-
-    tag tags[] = {{"activity", "activity.txt"}, {"service", "services.txt"},
-    {"receiver", "receiver.txt"}, {"provider", "providers.txt"}};
-
-    //cur = cur->xmlChildrenNode;
-
-    while (cur != NULL)
-    {
-        for(int i = 0; i < 4; i++){
-            if ((!xmlStrcmp(cur->name, (const xmlChar *)tags[i].tag))){
-                if ((file[i] = fopen(tags[i].f_tag, "a+")) != NULL){
-                    xmlBufferEmpty(buf);
-
-                    xmlNodeDump(buf, doc, cur, 0,1);
-                    fwrite((const char *)buf->content, 1, buf->use, file[i]);
-                    fclose(file[i]);
-                }
-            }
-        }
-        cur = cur->next;
-    }
-
-    xmlBufferFree(buf);
-    return 0;
+typedef struct a{
+    char 
 }
-
-void parsedoc(char *xmlfile, int(*xmlfunc)(xmlDocPtr, xmlNodePtr))
-{
-    //this function parses the xml document 
-    extern xmlDocPtr doc;
-    extern xmlNodePtr cur;
-    
-    //doc = xmlParseFile(xmlfile);
-
-    if(doc == NULL)
-    {
-        fprintf(stderr, "Document not parsed successfully\n");
-        xmlFreeDoc(doc);
-        return;
-    }
-
-    cur = xmlDocGetRootElement(doc);
-
-    if (cur == NULL)
-    {
-        fprintf(stderr, "Empty Document\n");
-        xmlFreeDoc(doc);
-        return;
-    }
-    if (!xmlStrcmp(cur->name, (const xmlChar *)"manifest"))
-    {
-        xmlNodePtr child = cur->xmlChildrenNode;
-        while(child != NULL)
-        {
-            if((!xmlStrcmp(child->name, (const xmlChar *)"application")))
-            {
-                xmlfunc(doc, child);
-                break;
-            }
-            child = child->next;
-        }
-    }
-    
-}
-
-/*void ParseActivity(xmlDocPtr doc, xmlNodePtr cur)
-{
-    xmlBufferPtr buf = xmlBufferCreate();
-
-    cur = cur->xmlChildrenNode;
-
-    while
-}*/
 int analyse_per(char *a)
 {
     char perm[PATH_MAX];
     bool inside_intent = false;
     bool inside_tag = false;
     FILE *AndroidManifest;
-    FILE *file_point[2];
-    xmlDocPtr doc = xmlParseFile("AndroidManifest.xml");
-    xmlNodePtr cur = cur->xmlChildrenNode;
+    FILE *file_point[6];
+    tag tags[] = {{"uses-permission", "permission.txt"}, {"activity", "activity.txt"}, {"service", "services.txt"},
+    {"receiver", "receiver.txt"}, {"provider", "providers.txt"}, {"application", "app.txt"}};
 
-    parsedoc("AndroidManifest.xml", (int)*parsetag(doc, cur));
-
-    tag tags[] = {{"uses-permission", "permission.txt"}, {"application", "app.txt"}};
-    
     if ((AndroidManifest = fopen("AndroidManifest.xml", "rb")) == NULL)
     {
         perror("The AndroidManifest file could not be open");
-        //return EXIT_FAILURE;
+        return EXIT_FAILURE;
     }
     while(fgets(perm, PATH_MAX-1, AndroidManifest))
     {
-        for (int i = 0; i < 2; i++)
-            if (strstr(perm, tags[i].tag) && (file_point[i] = fopen(tags[i].f_tag, "a+")) != NULL)
+        for(int i = 0; i < 6; i++)
+        {
+            if(strstr(perm, tags[i].tag) != NULL && (file_point[i] = fopen(tags[i].f_tag, "a+")) != NULL)
             {
                 fprintf(file_point[i], "%s", perm);
+                fclose(file_point[i]);
+
             }
+            if(strstr(perm, tags)){
+                inside_tag = true;
+                if(strstr(perm, "<intent-filter>")){
+                    file_point[i]=fopen(tags[i].f_tag, "a+");
+                    inside_intent = true;
+                    fprintf(file_point[i], "%s", perm);
+                    fclose(file_point[i]);
+                    continue;
+                } 
+                if(inside_intent)
+                {
+                    file_point[i]=fopen(tags[i].f_tag, "a+");
+                    fprintf(file_point[i], "%s", perm);
+                    if(strstr(perm, "</intent-filter>"))
+                    {
+                        inside_intent = false;
+                    }
+                    fclose(file_point[i]);
+                }
+            }
+        }
 
     }
     fclose(AndroidManifest);

@@ -3,3 +3,5 @@
 *.xml
 test.c
 *.txt
+pomodoro.c
+*.out

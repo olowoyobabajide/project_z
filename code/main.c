@@ -1,5 +1,5 @@
 #include "main.h"
-
+ void parsedoc(char *a);
 void tag_perm(char *a);
 int main(int argc, char **argv)
 {
@@ -18,9 +18,9 @@ int main(int argc, char **argv)
         printf("NFTW\n");
         return 1;
     }*/
-    //analyse_per(buffer);//for checking permissions in permission.txt
+    analyse_per(buffer);//for checking permissions in permission.txt
     //char *a = "permission.txt";
     //tag_perm(a);
-    tag_act("activity.txt");
-    
+    //tag_act("activity.txt");
+    //parsedoc("AndroidManifest.xml");
 }
