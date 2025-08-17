@@ -17,6 +17,5 @@ int analyse_per(char *a);
 int tag_act(char *a);
 void tag_perm(char *a);
 int apk_check(char *apk);
-//static int nfile(const char *path, const struct stat *sb, int typeflag, struct FTW *ftbuf);
 
 #endif
