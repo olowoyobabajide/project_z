@@ -1,5 +1,5 @@
 #include "main.h"
- void parsedoc(char *a);
+void parsedoc(char *a);
 void tag_perm(char *a);
 int main(int argc, char **argv)
 {

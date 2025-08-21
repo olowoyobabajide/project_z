@@ -20,7 +20,7 @@ const char *permission[24] = {" ","android.permission.READ_SMS","android.permiss
 "android.permission.BIND_ACCESSIBILITY_SERVICE","android.permission.REQUEST_INSTALL_PACKAGES",
 "android.permission.VIBRATE","android.permission.WAKE_LOCK","android.permission.RECEIVE_BOOT_COMPLETED"};
 void parsetag(xmlDocPtr doc, xmlNodePtr cur);
-void parsedoc(xmlDocPtr doc);
+void parsedoc(char *xmlfile, char *root, char *node, void(*xmlfunc)(xmlDocPtr, xmlNodePtr));
 
 typedef struct tag{
     //A struct for the the tags activity, services...
@@ -34,43 +34,87 @@ typedef struct reason_perms{
 }rperm;
 
 
+#include <stdio.h>
+#include <string.h>
+#include <libxml/xmlwriter.h>
+#include <libxml/parser.h>
+#include <libxml/tree.h>
+
+
 void parsetag(xmlDocPtr doc, xmlNodePtr cur)
 {
-    //parsing the tag. Checking for each nested node under <application>
-    xmlBufferPtr buf = xmlBufferCreate();
-    FILE *file[4];
+    // Array of tags to process and their corresponding output files
+    tag tags[] = {
+        {"activity", "activity.xml"},
+        {"service", "services.xml"},
+        {"receiver", "receiver.xml"},
+        {"provider", "providers.xml"}
+    };
+    int num_tags = sizeof(tags) / sizeof(tags[0]);
+    FILE *files[num_tags];
+    xmlOutputBufferPtr outputs[num_tags];
+    xmlNodePtr initial_cur = cur; // Save the starting node
 
-    tag tags[] = {{"activity", "activity.txt"}, {"service", "services.txt"},
-    {"receiver", "receiver.txt"}, {"provider", "providers.txt"}};
-
-    cur = cur->xmlChildrenNode;
-
-    while (cur != NULL)
-    {
-        for(int i = 0; i < 4; i++){
-            if ((!xmlStrcmp(cur->name, (const xmlChar *)tags[i].tag))){
-                if ((file[i] = fopen(tags[i].f_tag, "a+")) != NULL){
-                    xmlBufferEmpty(buf);
-
-                    xmlNodeDump(buf, doc, cur, 0,1);
-                    fwrite((const char *)buf->content, 1, buf->use, file[i]);
-                    fclose(file[i]);
+    // 1. Open all files in write mode to clear them and prepare for writing.
+    for (int i = 0; i < num_tags; i++) {
+        files[i] = fopen(tags[i].f_tag, "w");
+        if (files[i] == NULL) {
+            fprintf(stderr, "Error opening file %s\n", tags[i].f_tag);
+            // Close already opened files before returning
+            for (int j = 0; j < i; j++) {
+                if (outputs[j]) {
+                    xmlOutputBufferWriteString(outputs[j], "\n</root>\n");
+                    xmlOutputBufferClose(outputs[j]);
+                }
+                if (files[j]) {
+                    fclose(files[j]);
                 }
             }
+            return;
         }
-        cur = cur->next;
+        outputs[i] = xmlOutputBufferCreateFile(files[i], NULL);
+        if(outputs[i]) {
+            // Write the XML declaration and the opening root tag once per file.
+            xmlOutputBufferWriteString(outputs[i], "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"no\"?>\n");
+            xmlOutputBufferWriteString(outputs[i], "<root>\n");
+        }
     }
 
-    xmlBufferFree(buf);
+    // 2. Iterate through all sibling nodes.
+    while (cur != NULL) {
+        for (int i = 0; i < num_tags; i++) {
+            // Check if the current node name matches one of our target tags.
+            if ((!xmlStrcmp(cur->name, (const xmlChar *)tags[i].tag))) {
+                // If there's a match, dump the node to the corresponding output buffer.
+                if(outputs[i]) {
+                    xmlNodeDumpOutput(outputs[i], doc, cur, 0, 1, "UTF-8");
+                }
+                // A node can only match one tag type, so we can break the inner loop.
+                break;
+            }
+        }
+        cur = cur->next; // Move to the next sibling node.
+    }
+
+    // 3. Write the closing root tag and close all buffers and files.
+    for (int i = 0; i < num_tags; i++) {
+        if (outputs[i]) {
+            xmlOutputBufferWriteString(outputs[i], "\n</root>\n");
+            xmlOutputBufferClose(outputs[i]); // This also flushes the buffer.
+        }
+        if (files[i]) {
+            fclose(files[i]);
+        }
+    }
+
     return;
 }
 
-void parsedoc(xmlDocPtr doc)
+void parsedoc(char *xmlfile, char *root, char *node, void(*xmlfunc)(xmlDocPtr, xmlNodePtr))
 {
-    //parsing the XML doc
+    //this function parses the xml document 
     xmlNodePtr cur;
-    
-    //doc = xmlParseFile("Androidmanifest.xml");
+    xmlDocPtr doc = xmlParseFile(xmlfile);
 
     if(doc == NULL)
     {
@@ -87,23 +131,40 @@ void parsedoc(xmlDocPtr doc)
         xmlFreeDoc(doc);
         return;
     }
-    if (!xmlStrcmp(cur->name, (const xmlChar *)"manifest"))
+    if (!xmlStrcmp(cur->name, (const xmlChar *)root))
     {
         xmlNodePtr child = cur->xmlChildrenNode;
         while(child != NULL)
         {
-            if((!xmlStrcmp(child->name, (const xmlChar *)"application")))
+            if((!xmlStrcmp(child->name, (const xmlChar *)node)))
             {
-                parsetag(doc, child);
-                break;
+                xmlfunc(doc, child->xmlChildrenNode);
             }
             child = child->next;
         }
     }
-    
+    xmlFreeDoc(doc);
 }
 
+void parseActivity(xmlDocPtr doc, xmlNodePtr cur)
+{
+    //parsing the <activity>tag and logging it
 
+
+    while (cur != NULL)
+    {
+        
+        if ((!xmlStrcmp(cur->name, (const xmlChar *)"action"))){
+            xmlChar *actionName = xmlGetProp(cur, (const xmlChar *)"action:name");
+            if (actionName){
+                printf("%s\n", actionName);
+            }
+        }
+        cur = cur->next;
+    }
+
+    return;
+}
 int analyse_per(char *a)
 {
     char perm[PATH_MAX];
@@ -111,17 +172,16 @@ int analyse_per(char *a)
     bool inside_tag = false;
     FILE *AndroidManifest;
     FILE *file_point[2];
-    xmlDocPtr doc = xmlParseFile("AndroidManifest.xml");
-    //xmlNodePtr cur = cur->xmlChildrenNode;
 
-    parsedoc(doc);
+    parsedoc("AndroidManifest.xml", "manifest", "application", parsetag);
+    //parsedoc("activity.xml", "root", "activity", parseActivity);
 
     tag tags[] = {{"uses-permission", "permission.txt"}, {"application", "app.txt"}};
     
     if ((AndroidManifest = fopen("AndroidManifest.xml", "rb")) == NULL)
     {
         perror("The AndroidManifest file could not be open");
-        //return EXIT_FAILURE;
+        return EXIT_FAILURE;
     }
     while(fgets(perm, PATH_MAX-1, AndroidManifest))
     {
@@ -130,9 +190,9 @@ int analyse_per(char *a)
             {
                 fprintf(file_point[i], "%s", perm);
             }
-
     }
     fclose(AndroidManifest);
+    return 0;
 }
 
 

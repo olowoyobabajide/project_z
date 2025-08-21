@@ -1,7 +1,7 @@
 /temp
-/test
 *.xml
 test.c
 *.txt
 pomodoro.c
 *.out
+*.vscode
