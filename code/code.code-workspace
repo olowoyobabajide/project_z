@@ -11,6 +11,10 @@
 		"zenMode.fullScreen": false,
 		"zenMode.hideLineNumbers": false,
 		"zenMode.hideStatusBar": false,
-		"zenMode.restore": false
+		"zenMode.restore": false,
+		"files.associations": {
+			"typeinfo": "c",
+			"text_encoding": "c"
+		}
 	}
 }

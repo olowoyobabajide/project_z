@@ -4,4 +4,6 @@ test.c
 *.txt
 pomodoro.c
 *.out
-*.vscode
+/.vscode
+/mini
+/build

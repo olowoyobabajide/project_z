@@ -21,6 +21,5 @@ int main(int argc, char **argv)
     analyse_per(buffer);//for checking permissions in permission.txt
     //char *a = "permission.txt";
     //tag_perm(a);
-    //tag_act("activity.txt");
     //parsedoc("AndroidManifest.xml");
 }

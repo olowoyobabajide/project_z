@@ -47,7 +47,7 @@ void parsetag(xmlDocPtr doc, xmlNodePtr cur)
     FILE *files[num_tags];
     xmlOutputBufferPtr outputs[num_tags];
     xmlNodePtr initial_cur = cur; // Save the starting node
-
+    cur = cur->children;
     //Open all files in write mode to clear them and prepare for writing.
     for (int i = 0; i < num_tags; i++) {
         files[i] = fopen(tags[i].f_tag, "w");
@@ -132,7 +132,7 @@ void parsedoc(char *xmlfile, char *root, char *node, void(*xmlfunc)(xmlDocPtr, x
         {
             if((!xmlStrcmp(child->name, (const xmlChar *)node)))
             {
-                xmlfunc(doc, child->xmlChildrenNode);
+                xmlfunc(doc, child/*->children*/);
             }
             child = child->next;
         }
@@ -142,46 +142,156 @@ void parsedoc(char *xmlfile, char *root, char *node, void(*xmlfunc)(xmlDocPtr, x
 
 void parseActivity(xmlDocPtr doc, xmlNodePtr cur)
 {
-    //parsing the <activity>tag and logging it
-
-
-    while (cur != NULL)
+    
+    FILE *log; //log file file for activity
+    if ((log = fopen("log.txt", "a+")) == NULL)
     {
-        if ((!xmlStrcmp(cur->name, (const xmlChar *)"intent-filter"))){
-            xmlNodePtr child = cur->xmlChildrenNode;
-            while(child != NULL){
-                if ((!xmlStrcmp(child->name, (const xmlChar *)"action"))){
-                    xmlChar *actionName = xmlGetProp(child, "action:name");
-                    if(actionName)
-                    {
-                        printf("%s\n", actionName);
-                    }
-                }
-                child = child->next;
-            }
-            
-        }
-        cur = cur->next;
+        perror("No log file");
     }
 
+    fprintf(log, "\nActivity Checker\n");
+    if((!xmlStrcmp(cur->name, (const xmlChar*)"activity")))
+    {
+        
+        xmlChar *export = xmlGetProp(cur, (const xmlChar*)"exported");
+        xmlChar *actName = xmlGetProp(cur, (const xmlChar*)"name");
+        if (export != NULL && actName != NULL && (!xmlStrcmp(export, (const xmlChar*)"true"))){
+            
+            xmlNodePtr activityNode = cur->children;
+            int hasIntentfilter = 0;
+            while (activityNode != NULL) 
+            {
+                //confirms that <ativity> tag has an intent filter
+                if((!xmlStrcmp(activityNode->name, (const xmlChar*)"intent-filter"))){
+                    hasIntentfilter = 1;
+                    xmlNodePtr child = activityNode->xmlChildrenNode;
+                    while(child != NULL)
+                    {
+                        if ((!xmlStrcmp(child->name, (const xmlChar *)"action")) ||
+                            !(xmlStrcmp(child->name, (const xmlChar*)"category")) ){
+                            xmlChar *actionName = xmlGetProp(child, (const xmlChar*)"name");
+                            if(actionName != NULL && (!xmlStrcmp(export, (const xmlChar*)"true")))
+                            {
+                                fprintf(log, "\nActivity: %s\nIntent-filter: yes\
+                                    \nExported: \nPerrmission: None\nRisk Level: Dangerous\n", actionName, export);
+                                fprintf(log, "Reason: Exported activity with intent-filter and no access restriction\n-------\n");
+                                xmlFree(actionName);
+                            }
+                            if(actionName != NULL && (!xmlStrcmp(export, (const xmlChar*)"false"))){
+                                fprintf(log, "\nActivity: %s\nIntent-filter: yes\
+                                    \nExported: \nPerrmission: None\nRisk Level: Safe\n", actionName, export);
+                                fprintf(log, "Not exported. Safe\n");
+                                xmlFree(actionName);
+                            }
+                        }
+                        child = child->next;
+                    }
+                }
+                activityNode = activityNode->next;
+
+            }
+            if(hasIntentfilter == 0){
+                fprintf(log, "\nActivity: %s\nIntent-filter: No\
+                    \nExported: false\nPermission: None\nRisk Level: Moderate\n", actName);
+                fprintf(log, "Reason: Exported activity without an intent-filter. Can be launched by name. Is this necessary?\n-------\n");
+            }
+            xmlFree(export);
+            xmlFree(actName);
+        }
+        
+    }
+    
+    fclose(log);
     return;
 }
+
+void parseService(xmlDocPtr doc, xmlNodePtr cur)
+{
+    FILE *log;
+    if ((log = fopen("log.txt", "a+")) == NULL)
+    {
+        fprintf(stderr, "Services not available\n");
+
+    }
+    if ((!xmlStrcmp(cur->name, (const xmlChar*)"service"))){
+        xmlChar *servicename = xmlGetProp(cur, (const xmlChar*)"name");
+        xmlChar *checkExport = xmlGetProp(cur, (const xmlChar*)"exported");
+        xmlChar *checkPermission = xmlGetProp(cur, (const xmlChar*)"permission");
+        fprintf(log, "Service: %s\n", servicename);
+        fprintf(log, "Exported: %s\n", checkExport);
+        xmlChar *reason;
+        xmlNodePtr intent;
+         intent = cur->children;
+        if (checkExport != NULL){
+            if((!xmlStrcmp(checkExport, (const xmlChar*)"true"))){
+               
+                if (checkPermission == NULL)
+                {
+                    fprintf(log, "Permission: %s\n", checkPermission);
+                    reason = "DANGEROUS (Exported Without Permission)\n";
+                    while (intent != NULL)
+                    {
+                        if((!xmlStrcmp(intent->name, (const xmlChar*)"intent-filter")))
+                        {
+                            fprintf(log, "Intent filter: YES\n");
+                            fprintf(log, "Reason: %s\n------\n", reason);
+                        }
+                        intent = intent->next;
+                    }
+                }
+                else{
+                    fprintf(log, "Permission: %s", checkPermission);
+                    reason = "SAFE (Exported but protected)\n";
+                    while (intent != NULL)
+                    {
+                        if((!xmlStrcmp(intent->name, (const xmlChar*)"intent-filter")))
+                        {
+                            fprintf(log, "Intent filter: YES\n");
+                            fprintf(log, "Reason: %s\n------\n", reason);
+                        }
+                        intent = intent->next;
+                    }
+                }
+            }
+            else{
+                //intent = cur->children;
+                fprintf(log, "Permission: None\n");
+                while(intent != NULL)
+                {
+                    if((!xmlStrcmp(intent->name, (const xmlChar*)"intent-filter")))
+                    {
+                        fprintf(log, "Intent filter: YES\n");
+                        fprintf(log, "Reason: SAFE (Service not exported)\n------\n");
+                    }
+                    intent = intent->next;   
+                }
+            }
+        }
+        
+        xmlFree(servicename);
+        xmlFree(checkExport);
+        xmlFree(checkPermission);
+    }
+    fclose(log);
+}
+
 int analyse_per(char *a)
 {
     char perm[PATH_MAX];
     bool inside_intent = false;
     bool inside_tag = false;
-    FILE *AndroidManifest;
-    FILE *file_point[2];
-
+    FILE *AndroidManifest, *file_point[2];
+    
     //parsedoc("AndroidManifest.xml", "manifest", "application", parsetag);
-    parsedoc("activity.xml", "root", "activity", parseActivity);
+    //parsedoc("activity.xml", "root", "activity", parseActivity);
+    parsedoc("services.xml", "root", "service", parseService);
+
 
     tag tags[] = {{"uses-permission", "permission.txt"}, {"application", "app.txt"}};
     
     if ((AndroidManifest = fopen("AndroidManifest.xml", "rb")) == NULL)
     {
-        perror("The AndroidManifest file could not be open");
+        perror("The AndroidManifest does not exist\n");
         return EXIT_FAILURE;
     }
     while(fgets(perm, PATH_MAX-1, AndroidManifest))
@@ -236,7 +346,7 @@ void tag_perm(char *a)
 {"android.permission.WAKE_LOCK","\nRisk Level: LOW,Keeps screen awake; minor battery risk, no data access\n-------\n"},
 {"android.permission.RECEIVE_BOOT_COMPLETED","\nRisk Level: MODERATE\nReason: Starts app after boot; can be used for stealthy persistence\n-------\n"}
     };
-    if ((log = fopen("log.txt", "a+")) == NULL)
+    if ((log = fopen("log.txt", "w")) == NULL)
     {
         perror("No log file");
     }
@@ -277,50 +387,4 @@ void tag_perm(char *a)
     fclose(log);
     fclose(file);
 
-}
-
-int tag_act(char *a)
-{
-    FILE *file;
-    FILE *act;
-
-    if((file = fopen(a, "rb")) == NULL)
-    {
-        perror("Cannot read activity.txt");
-    }
-    if ((act = fopen("log.txt", "a+")) == NULL)
-    {
-        perror("The log file is inaccessbile");
-        return EXIT_FAILURE;
-    }
-    char *hehe = "Activity: ";
-    char perm[PATH_MAX];
-    char *ptr = perm;
-    while(fgets(perm, PATH_MAX-1, file))//reads the file line by line
-    {
-        
-        if((ptr = strstr(perm, "android:name=\""))!= NULL)//returns a pointer to the character after android.nam...
-        {
-            ptr += 14;
-            char *end;
-            if (end = strchr(ptr, '"'))
-            {
-                //splits it off at the end 
-                *end = '\0';
-                //printf("%s", ptr);
-                        
-                int offset = 0;
-                char temp[keep];
-
-                memcpy(temp + offset, hehe, strlen(hehe));
-                offset += strlen(hehe);
-                memcpy(temp + offset, ptr, strlen(ptr));
-                offset += strlen(ptr);
-                
-                fwrite(temp, sizeof(char), offset, act);
-            }
-        }
-    }
-    fclose(act);
-    fclose(file);
 }

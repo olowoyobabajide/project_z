@@ -34,13 +34,6 @@ typedef struct reason_perms{
 }rperm;
 
 
-#include <stdio.h>
-#include <string.h>
-#include <libxml/xmlwriter.h>
-#include <libxml/parser.h>
-#include <libxml/tree.h>
-
-
 void parsetag(xmlDocPtr doc, xmlNodePtr cur)
 {
     // Array of tags to process and their corresponding output files
@@ -54,8 +47,8 @@ void parsetag(xmlDocPtr doc, xmlNodePtr cur)
     FILE *files[num_tags];
     xmlOutputBufferPtr outputs[num_tags];
     xmlNodePtr initial_cur = cur; // Save the starting node
-
-    // 1. Open all files in write mode to clear them and prepare for writing.
+    cur = cur->children;
+    //Open all files in write mode to clear them and prepare for writing.
     for (int i = 0; i < num_tags; i++) {
         files[i] = fopen(tags[i].f_tag, "w");
         if (files[i] == NULL) {
@@ -76,11 +69,12 @@ void parsetag(xmlDocPtr doc, xmlNodePtr cur)
         if(outputs[i]) {
             // Write the XML declaration and the opening root tag once per file.
             xmlOutputBufferWriteString(outputs[i], "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"no\"?>\n");
-            xmlOutputBufferWriteString(outputs[i], "<root>\n");
+            xmlOutputBufferWriteString(outputs[i], 
+                "<root xmlns:android=\"http://schemas.android.com/apk/res/android\">\n");
         }
     }
 
-    // 2. Iterate through all sibling nodes.
+    //Iterate through all sibling nodes.
     while (cur != NULL) {
         for (int i = 0; i < num_tags; i++) {
             // Check if the current node name matches one of our target tags.
@@ -96,7 +90,7 @@ void parsetag(xmlDocPtr doc, xmlNodePtr cur)
         cur = cur->next; // Move to the next sibling node.
     }
 
-    // 3. Write the closing root tag and close all buffers and files.
+    //Write the closing root tag and close all buffers and files.
     for (int i = 0; i < num_tags; i++) {
         if (outputs[i]) {
             xmlOutputBufferWriteString(outputs[i], "\n</root>\n");
@@ -138,7 +132,7 @@ void parsedoc(char *xmlfile, char *root, char *node, void(*xmlfunc)(xmlDocPtr, x
         {
             if((!xmlStrcmp(child->name, (const xmlChar *)node)))
             {
-                xmlfunc(doc, child->xmlChildrenNode);
+                xmlfunc(doc, child/*->children*/);
             }
             child = child->next;
         }
@@ -149,20 +143,63 @@ void parsedoc(char *xmlfile, char *root, char *node, void(*xmlfunc)(xmlDocPtr, x
 void parseActivity(xmlDocPtr doc, xmlNodePtr cur)
 {
     //parsing the <activity>tag and logging it
-
-
-    while (cur != NULL)
+    FILE *log;
+    if ((log = fopen("log.txt", "a+")) == NULL)
+    {
+        perror("No log file");
+    }
+    if((!xmlStrcmp(cur->name, (const xmlChar*)"activity")))
     {
         
-        if ((!xmlStrcmp(cur->name, (const xmlChar *)"action"))){
-            xmlChar *actionName = xmlGetProp(cur, (const xmlChar *)"action:name");
-            if (actionName){
-                printf("%s\n", actionName);
+        fprintf(log, "Activity Checker\n");
+        xmlChar *export = xmlGetProp(cur, (const xmlChar*)"exported");
+        xmlChar *actName = xmlGetProp(cur, (const xmlChar*)"name");
+        if (export != NULL && actName != NULL && (!xmlStrcmp(export, (const xmlChar*)"true"))){
+            
+            xmlNodePtr activityNode = cur->children;
+            int hasIntentfilter = 0;
+            if((!xmlStrcmp(activityNode->name, (const xmlChar*)"intent-filter"))){
+                while (activityNode != NULL)
+                {
+                    if((!xmlStrcmp(activityNode->name, (const xmlChar *)"intent-filter"))){
+                    xmlNodePtr child = activityNode->xmlChildrenNode;
+                    while(child != NULL)
+                    {
+                        if ((!xmlStrcmp(child->name, (const xmlChar *)"action")) ||
+                            !(xmlStrcmp(child->name, (const xmlChar*)"category")) ){
+                            xmlChar *actionName = xmlGetProp(child, (const xmlChar*)"name");
+                            if(actionName != NULL && (!xmlStrcmp(export, (const xmlChar*)"true")))
+                            {
+                                fprintf(log, "\nActivity: %s\nIntent-filter: yes\
+                                    \nExported: \nPerrmission: None\nRisk Level: Dangerous\n", actionName, export);
+                                fprintf(log, "Reason: Exported activity with intent-filter and no access restriction\n-------\n");
+                                xmlFree(actionName);
+                            }
+                            if(actionName != NULL && (!xmlStrcmp(export, (const xmlChar*)"false"))){
+                                fprintf(stderr, "Could not find action:name attribute in <activity> tag\n");
+                            }
+                        }
+                        child = child->next;
+                    }
+                    }
+                
+                    activityNode = activityNode->next;
+                }
             }
+            
+            /*else{
+                fprintf(log, "\nActivity: %s\nIntent-filter: yes\
+                    \nExported: false\nPerrmission: None\nRisk Level: Moderate\n", actName);
+                fprintf(log, "Reason: Exported activity without an intent-filter. Can be launched by name. Is this necessary?\n-------\n");
+                activityNode = activityNode->next;
+            }*/
+            xmlFree(export);
+            xmlFree(actName);
         }
-        cur = cur->next;
+        
     }
-
+    
+    fclose(log);
     return;
 }
 int analyse_per(char *a)
@@ -170,17 +207,16 @@ int analyse_per(char *a)
     char perm[PATH_MAX];
     bool inside_intent = false;
     bool inside_tag = false;
-    FILE *AndroidManifest;
-    FILE *file_point[2];
-
-    parsedoc("AndroidManifest.xml", "manifest", "application", parsetag);
-    //parsedoc("activity.xml", "root", "activity", parseActivity);
+    FILE *AndroidManifest, *file_point[2];
+    
+    //parsedoc("AndroidManifest.xml", "manifest", "application", parsetag);
+    parsedoc("activity.xml", "root", "activity", parseActivity);
 
     tag tags[] = {{"uses-permission", "permission.txt"}, {"application", "app.txt"}};
     
     if ((AndroidManifest = fopen("AndroidManifest.xml", "rb")) == NULL)
     {
-        perror("The AndroidManifest file could not be open");
+        perror("The AndroidManifest does not exist\n");
         return EXIT_FAILURE;
     }
     while(fgets(perm, PATH_MAX-1, AndroidManifest))
@@ -235,7 +271,7 @@ void tag_perm(char *a)
 {"android.permission.WAKE_LOCK","\nRisk Level: LOW,Keeps screen awake; minor battery risk, no data access\n-------\n"},
 {"android.permission.RECEIVE_BOOT_COMPLETED","\nRisk Level: MODERATE\nReason: Starts app after boot; can be used for stealthy persistence\n-------\n"}
     };
-    if ((log = fopen("log.txt", "a+")) == NULL)
+    if ((log = fopen("log.txt", "w")) == NULL)
     {
         perror("No log file");
     }
@@ -276,50 +312,4 @@ void tag_perm(char *a)
     fclose(log);
     fclose(file);
 
-}
-
-int tag_act(char *a)
-{
-    FILE *file;
-    FILE *act;
-
-    if((file = fopen(a, "rb")) == NULL)
-    {
-        perror("Cannot read activity.txt");
-    }
-    if ((act = fopen("log.txt", "a+")) == NULL)
-    {
-        perror("The log file is inaccessbile");
-        return EXIT_FAILURE;
-    }
-    char *hehe = "Activity: ";
-    char perm[PATH_MAX];
-    char *ptr = perm;
-    while(fgets(perm, PATH_MAX-1, file))//reads the file line by line
-    {
-        
-        if((ptr = strstr(perm, "android:name=\""))!= NULL)//returns a pointer to the character after android.nam...
-        {
-            ptr += 14;
-            char *end;
-            if (end = strchr(ptr, '"'))
-            {
-                //splits it off at the end 
-                *end = '\0';
-                //printf("%s", ptr);
-                        
-                int offset = 0;
-                char temp[keep];
-
-                memcpy(temp + offset, hehe, strlen(hehe));
-                offset += strlen(hehe);
-                memcpy(temp + offset, ptr, strlen(ptr));
-                offset += strlen(ptr);
-                
-                fwrite(temp, sizeof(char), offset, act);
-            }
-        }
-    }
-    fclose(act);
-    fclose(file);
 }
