@@ -19,8 +19,8 @@ const char *permission[24] = {" ","android.permission.READ_SMS","android.permiss
 "android.permission.WRITE_EXTERNAL_STORAGE","android.permission.INTERNET","android.permission.SYSTEM_ALERT_WINDOW",
 "android.permission.BIND_ACCESSIBILITY_SERVICE","android.permission.REQUEST_INSTALL_PACKAGES",
 "android.permission.VIBRATE","android.permission.WAKE_LOCK","android.permission.RECEIVE_BOOT_COMPLETED"};
-void parsetag(xmlDocPtr doc, xmlNodePtr cur);
-void parsedoc(char *xmlfile, char *root, char *node, void(*xmlfunc)(xmlDocPtr, xmlNodePtr));
+void parsetag(xmlDocPtr doc, xmlNodePtr cur, FILE *log);
+void parsedoc(char *xmlfile, char *root, char *node, FILE *log, void(*xmlfunc)(xmlDocPtr, xmlNodePtr, FILE *log));
 
 typedef struct tag{
     //A struct for the the tags activity, services...
@@ -34,8 +34,9 @@ typedef struct reason_perms{
 }rperm;
 
 
-void parsetag(xmlDocPtr doc, xmlNodePtr cur)
+void parsetag(xmlDocPtr doc, xmlNodePtr cur, FILE *log)
 {
+    (void)log;
     // Array of tags to process and their corresponding output files
     tag tags[] = {
         {"activity", "activity.xml"},
@@ -43,6 +44,7 @@ void parsetag(xmlDocPtr doc, xmlNodePtr cur)
         {"receiver", "receiver.xml"},
         {"provider", "providers.xml"}
     };
+    
     int num_tags = sizeof(tags) / sizeof(tags[0]);
     FILE *files[num_tags];
     xmlOutputBufferPtr outputs[num_tags];
@@ -104,11 +106,16 @@ void parsetag(xmlDocPtr doc, xmlNodePtr cur)
     return;
 }
 
-void parsedoc(char *xmlfile, char *root, char *node, void(*xmlfunc)(xmlDocPtr, xmlNodePtr))
+void parsedoc(char *xmlfile, char *root, char *node, FILE *log, void(*xmlfunc)(xmlDocPtr, xmlNodePtr, FILE *))
 {
     //this function parses the xml document 
     xmlNodePtr cur;
     xmlDocPtr doc = xmlParseFile(xmlfile);
+
+    /*if (log == NULL)
+    {
+        printf("error\n");
+    }*/
 
     if(doc == NULL)
     {
@@ -132,7 +139,7 @@ void parsedoc(char *xmlfile, char *root, char *node, void(*xmlfunc)(xmlDocPtr, x
         {
             if((!xmlStrcmp(child->name, (const xmlChar *)node)))
             {
-                xmlfunc(doc, child/*->children*/);
+                xmlfunc(doc, child, log);
             }
             child = child->next;
         }
@@ -140,19 +147,18 @@ void parsedoc(char *xmlfile, char *root, char *node, void(*xmlfunc)(xmlDocPtr, x
     xmlFreeDoc(doc);
 }
 
-void parseActivity(xmlDocPtr doc, xmlNodePtr cur)
+void parseActivity(xmlDocPtr doc, xmlNodePtr cur, FILE *log)
 {
     
-    FILE *log; //log file file for activity
-    if ((log = fopen("log.txt", "a+")) == NULL)
+    /*if (log == NULL)
     {
         perror("No log file");
-    }
+    }*/
 
     fprintf(log, "\nActivity Checker\n");
     if((!xmlStrcmp(cur->name, (const xmlChar*)"activity")))
     {
-        
+
         xmlChar *export = xmlGetProp(cur, (const xmlChar*)"exported");
         xmlChar *actName = xmlGetProp(cur, (const xmlChar*)"name");
         if (export != NULL && actName != NULL && (!xmlStrcmp(export, (const xmlChar*)"true"))){
@@ -201,18 +207,18 @@ void parseActivity(xmlDocPtr doc, xmlNodePtr cur)
         
     }
     
-    fclose(log);
+    //fclose(log);
     return;
 }
 
-void parseService(xmlDocPtr doc, xmlNodePtr cur)
+void parseService(xmlDocPtr doc, xmlNodePtr cur, FILE *log)
 {
-    FILE *log;
-    if ((log = fopen("log.txt", "a+")) == NULL)
+
+    /*if (log == NULL)
     {
         fprintf(stderr, "Services not available\n");
 
-    }
+    }*/
     if ((!xmlStrcmp(cur->name, (const xmlChar*)"service"))){
         xmlChar *servicename = xmlGetProp(cur, (const xmlChar*)"name");
         xmlChar *checkExport = xmlGetProp(cur, (const xmlChar*)"exported");
@@ -281,7 +287,7 @@ void parseService(xmlDocPtr doc, xmlNodePtr cur)
         xmlFree(checkExport);
         xmlFree(checkPermission);
     }
-    fclose(log);
+    //fclose(log);
 }
 
 typedef struct {
@@ -293,15 +299,13 @@ typedef struct {
     char *intentRisk;
 } actionIntent;
 
-void parseReceiver(xmlDocPtr doc, xmlNodePtr cur)
+void parseReceiver(xmlDocPtr doc, xmlNodePtr cur, FILE *log)
 {
-    FILE *log;
-
-    if ((log = fopen("log.txt", "a+")) == NULL)
+    /*if ((log = fopen("log.txt", "a+")) == NULL)
     {
-        fprintf(stderr, "Error: Receiver\n");
+        fprintf(stderr, "Services not available\n");
 
-    }
+    }*/
 
     actionIntent actIntent[] = {"", "", "android.intent.action.BOOT_COMPLETED", "Risk: malware persistence risk.",
 "android.intent.action.QUICKBOOT_POWERON","same risk as BOOT_COMPLETED",
@@ -352,6 +356,7 @@ void parseReceiver(xmlDocPtr doc, xmlNodePtr cur)
                                 }
                                 action = action->next;
                             }
+                            if (actionName) xmlFree(actionName);
                         }
                         intent = intent->next;
                     }
@@ -368,12 +373,67 @@ void parseReceiver(xmlDocPtr doc, xmlNodePtr cur)
                  fprintf(log, "------");
             }
         }
+        if(receiverName) xmlFree(receiverName);
+        if(export) xmlFree(export);
+        if(checkPermission) xmlFree(receiverName);
     }
+    
 }
 
-void parseProvider(xmlDocPtr, xmlNodePtr cur)
+void parseProvider(xmlDocPtr, xmlNodePtr cur, FILE *log)
 {
+    if ((!xmlStrcmp(cur->name, (const xmlChar*)"provider"))){
+        xmlChar *providerName = xmlGetProp(cur, (const xmlChar*)"name");
+        xmlChar *exported = xmlGetProp(cur, (const xmlChar*)"exported");
+        xmlChar *readPermission = xmlGetProp(cur, (const xmlChar*)"readPermission");
+        xmlChar *writePermission = xmlGetProp(cur, (const xmlChar*)"writePermission");
+        xmlChar *grantUri = xmlGetProp(cur, (const xmlChar*)"grantUriPermissions");
+        xmlChar *authorities = xmlGetProp(cur, (const xmlChar*)"authorities");
+        xmlNodePtr grantPermission = cur->children;
 
+        if(exported != NULL)
+        {
+            if((!xmlStrcmp(exported, (const xmlChar *)"true"))){
+                fprintf(log, "Provider name: %s\n", providerName);
+                if(readPermission == NULL && writePermission != NULL){
+                    fprintf(log, "Read Permission: None\n");
+                    fprintf(log, "Write Permission: None\n");
+                }
+                else{
+                    fprintf(log, "Read Permission: %s\n", readPermission);
+                    fprintf(log, "Write Permission: %s\n", writePermission);
+                }
+                if(grantUri != NULL){
+                    if ((!xmlStrcmp(grantUri, (const xmlChar*)"true"))){
+                        fprintf(log, "Grant URI Permission: %s.\n", grantUri);
+                        while (grantPermission != NULL){
+                            if((!xmlStrcmp(grantPermission->name, (const xmlChar*)"path-permission"))){
+                                fprintf(log, "HIGH:'grantUripermissions' used without path restrictions\n");
+                            }
+                            else{
+                                fprintf(log, "OK:'grantUripermissions' restricted with path permission\n");
+                            }
+                        }
+                    }
+                }
+                if(authorities != NULL){
+                    fprintf(log, "Authorities: %s\n", authorities);
+                }
+                    
+            }
+            else{
+                fprintf(log, "Provider name: %s\n", providerName);
+                fprintf(log, "Exported: %s\n", exported);
+                fprintf(log, "SAFE: Provider not exported\n------\n");
+            }
+        }
+        if(providerName) xmlFree(providerName);
+        if(exported) xmlFree(exported);
+        if(readPermission) xmlFree(readPermission);
+        if(writePermission) xmlFree(writePermission);
+        if(grantUri) xmlFree(grantUri);
+        if(authorities) xmlFree(authorities);
+    }
 }
 
 int analyse_per(char *a)
@@ -382,12 +442,19 @@ int analyse_per(char *a)
     bool inside_intent = false;
     bool inside_tag = false;
     FILE *AndroidManifest, *file_point[2];
-    
-    //parsedoc("AndroidManifest.xml", "manifest", "application", parsetag);
-    //parsedoc("activity.xml", "root", "activity", parseActivity);
-    //parsedoc("services.xml", "root", "service", parseService);
-    parsedoc("receiver.xml", "root", "receiver", parseReceiver);
 
+    FILE *log = fopen("log.txt", "w");
+    if (log == NULL){
+        perror("The AndroidManifest does not exist\n");
+        return EXIT_FAILURE;
+    }
+    
+    parsedoc("AndroidManifest.xml", "manifest", "application", log, parsetag);
+    parsedoc("activity.xml", "root", "activity", log,  parseActivity);
+    parsedoc("services.xml", "root", "service", log, parseService);
+    parsedoc("receiver.xml", "root", "receiver", log, parseReceiver);
+    
+  
 
     tag tags[] = {{"uses-permission", "permission.txt"}, {"application", "app.txt"}};
     
@@ -405,6 +472,7 @@ int analyse_per(char *a)
             }
     }
     fclose(AndroidManifest);
+    fclose(log);
     return 0;
 }
 

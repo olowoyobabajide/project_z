@@ -11,10 +11,12 @@
 #include <fnmatch.h>
 #include <libgen.h>
 #include <sys/wait.h>
+#include <stdbool.h>
 
 #define PATH_MAX 256
 int analyse_per(char *a);
 void tag_perm(char *a);
 int apk_check(char *apk);
+void dexScanner(char *dex);
 
 #endif

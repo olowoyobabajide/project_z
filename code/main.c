@@ -18,8 +18,9 @@ int main(int argc, char **argv)
         printf("NFTW\n");
         return 1;
     }*/
-    analyse_per(buffer);//for checking permissions in permission.txt
+    //analyse_per(buffer);//for checking permissions in permission.txt
     //char *a = "permission.txt";
     //tag_perm(a);
     //parsedoc("AndroidManifest.xml");
+    dex_scan("classes.dex");
 }

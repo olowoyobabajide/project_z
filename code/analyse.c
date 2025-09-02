@@ -427,7 +427,12 @@ void parseProvider(xmlDocPtr, xmlNodePtr cur, FILE *log)
                 fprintf(log, "SAFE: Provider not exported\n------\n");
             }
         }
-
+        if(providerName) xmlFree(providerName);
+        if(exported) xmlFree(exported);
+        if(readPermission) xmlFree(readPermission);
+        if(writePermission) xmlFree(writePermission);
+        if(grantUri) xmlFree(grantUri);
+        if(authorities) xmlFree(authorities);
     }
 }
 
