@@ -1,4 +1,4 @@
-#include <elf.h>
+#include <stdint.h>
 #include "main.h"
 
 /**
@@ -6,14 +6,17 @@
  */
 
 void dexPrint(char *str, uint32_t value, FILE *log);
+void dexstringData(char *dex);
+uint32_t binaryConvert(uint32_t num, uint32_t size);
 int main()
 {
-    dexScanner("classes.dex");
+    dexheaderScan("classes.dex");
+    dexstringData("classes.dex");
 }
 void dexPrint(char *str, uint32_t value, FILE *log){
     /**
-     * This function logs the str for the dex file
-     * I
+     * This function logs the string for the dex file
+     * Makes sure the right amount of data is stored
      */
     int size = snprintf(NULL, 0, str, value);
 
@@ -33,25 +36,24 @@ void dexPrint(char *str, uint32_t value, FILE *log){
 
     free(buffer);
 }
-void dexScanner(char *dex){
+
+void dexheaderScan(char *dex){
 
     FILE *file, *dexLog;
     bool safe_dex = true;
-    char *buffer = NULL;
-
-
+    
     if((dexLog = fopen("dexLog.txt", "w")) == NULL){
         fprintf(stderr, "Can't create dex log file\n");
     }
-    if((file = fopen(dex, "rb"))== NULL){
+    if((file = fopen(dex, "rb")) == NULL){
         fprintf(stderr, "Unable to read *.dex file\n");
     }
 
-    fprintf(dexLog, "Dex Log\n");
+    fprintf(dexLog, "Dex Log\n-----\n");
 
     while(safe_dex){
 
-        size_t get_magic;
+        //size_t get_magic;
         unsigned char buf[8];
         
         fread(buf, 1, 8, file);
@@ -70,7 +72,6 @@ void dexScanner(char *dex){
         else{
             fprintf(stderr, "Invalid dex file\n");
             safe_dex = false;
-
         }
 
         //file size
@@ -86,7 +87,7 @@ void dexScanner(char *dex){
         if (header_size != 112){
             fprintf(stderr, "Invalid header_size");
         }
-        dexPrint("Header size: %d bytes (ok)\n", header_size, dexLog);
+        dexPrint("Header size: %u bytes (ok)\n", header_size, dexLog);
         
         //endian value
         uint32_t little = 0x12345678;
@@ -104,13 +105,12 @@ void dexScanner(char *dex){
             safe_dex = false;
         }
 
-
         //string size
         uint32_t string_size, string_id_off;
         fseek(file, 0x38, SEEK_SET);
         fread(&string_size, 4, 1, file);
 
-        dexPrint("String size: %d bytes\n", string_size, dexLog);
+        dexPrint("String IDs size: %u bytes\n", string_size, dexLog);
 
         //string  offset
         fseek(file, 0x3C, SEEK_SET);
@@ -132,13 +132,63 @@ void dexScanner(char *dex){
         fseek(file, 0x6C, SEEK_SET);
         fread(&data_off, 4, 1, file);
 
-        dexPrint("Data Size: %d bytes\n", data_size, dexLog);
-        dexPrint("Data Size: %d bytes\n", data_off, dexLog);
+        dexPrint("Data Size: %u bytes\n", data_size, dexLog);
+        dexPrint("Data Off: %#04x\n", data_off, dexLog);
 
         break;
 
     }
-    free(buffer);
+    fprintf(dexLog, "\n------\n\n");
     fclose(file);
+    fclose(dexLog);
  }
 
+void dexstringData(char *dex){
+
+    
+    FILE *file, *dexLog;
+
+    if((dexLog = fopen("dexLog.txt", "a+")) == NULL){
+        fprintf(stderr, "Can't create dex log file\n");
+    }
+    if((file = fopen(dex, "rb"))== NULL){
+        fprintf(stderr, "Unable to read *.dex file\n");
+    }
+    
+    uint32_t string_size, string_id_off;
+    fseek(file, 0x38, SEEK_SET);
+    fread(&string_size, 4, 1, file);
+    
+    //string  offset
+    fseek(file, 0x3C, SEEK_SET);
+
+    int current_string_offset[string_size];
+
+    for(uint32_t i = 0; i < string_size; i++)
+    {
+        fread(&string_id_off, 4, 1, file);
+        dexPrint("string: %d\n", string_id_off, dexLog);
+        //current_string_offset[i] = string_id_off;
+        //snprintf(stroffset[i], sizeof(uint32_t*), "%d", &string_id_off);
+    
+    }
+    printf("%d\n", binaryConvert(current_string_offset[string_size], 8)); 
+    //printf("%d", current_string_offset[string_size]); 
+    fclose(dexLog);
+}
+
+uint32_t binaryConvert(uint32_t num, uint32_t size){
+    uint32_t binary[size];
+    uint32_t i = 0;
+    
+    while(i < size){
+        binary[i] = num & 1;
+        num = num >> 1;
+        i++;
+    }
+
+    for(int j = size-1;j > 0;){
+        printf("%d", binary[j--]);
+    }
+
+}

@@ -7,3 +7,4 @@ pomodoro.c
 /.vscode
 /mini
 /build
+*.dex
