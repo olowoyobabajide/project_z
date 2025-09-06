@@ -7,11 +7,15 @@
 
 void dexPrint(char *str, uint32_t value, FILE *log);
 void dexstringData(char *dex);
-uint32_t binaryConvert(uint32_t num, uint32_t size);
+int binaryConvert(uint32_t num, uint32_t size);
+uint32_t readULEB128(FILE *file);
+char* readDexString(FILE *file);
 int main()
 {
     dexheaderScan("classes.dex");
     dexstringData("classes.dex");
+
+    return 0;
 }
 void dexPrint(char *str, uint32_t value, FILE *log){
     /**
@@ -116,7 +120,7 @@ void dexheaderScan(char *dex){
         fseek(file, 0x3C, SEEK_SET);
         fread(&string_id_off, 4, 1, file);
 
-        dexPrint("String IDs offset: %#08x\n", string_id_off, dexLog);
+        dexPrint("String IDs offset: %#04x\n", string_id_off, dexLog);
         
         //bounds validation
         if((string_id_off + string_size * 4) > file_size)
@@ -144,12 +148,12 @@ void dexheaderScan(char *dex){
  }
 
 void dexstringData(char *dex){
-
     
     FILE *file, *dexLog;
 
     if((dexLog = fopen("dexLog.txt", "a+")) == NULL){
         fprintf(stderr, "Can't create dex log file\n");
+        fclose(dexLog);
     }
     if((file = fopen(dex, "rb"))== NULL){
         fprintf(stderr, "Unable to read *.dex file\n");
@@ -161,23 +165,57 @@ void dexstringData(char *dex){
     
     //string  offset
     fseek(file, 0x3C, SEEK_SET);
-
+    
     int current_string_offset[string_size];
-
     for(uint32_t i = 0; i < string_size; i++)
     {
         fread(&string_id_off, 4, 1, file);
-        dexPrint("string: %d\n", string_id_off, dexLog);
-        //current_string_offset[i] = string_id_off;
-        //snprintf(stroffset[i], sizeof(uint32_t*), "%d", &string_id_off);
-    
+        current_string_offset[i] = string_id_off;
     }
-    printf("%d\n", binaryConvert(current_string_offset[string_size], 8)); 
-    //printf("%d", current_string_offset[string_size]); 
+    for(uint32_t j = 1; j < string_size; j++){
+        fseek(file, current_string_offset[j], SEEK_SET);
+        char *str = readDexString(file);
+        if(str){
+            fprintf(dexLog, "Read str: %s\n", str);
+            free(str);
+        }
+        
+    }
     fclose(dexLog);
+    fclose(file);
 }
+char* readDexString(FILE *file){
+    size_t count = 0;
+    int c;
+    uint32_t length = readULEB128(file);
+    size_t bufSize = (length*4)+1;
+    char* buffer = malloc(bufSize);
 
-uint32_t binaryConvert(uint32_t num, uint32_t size){
+    if(!buffer)return NULL;
+
+    while(count < length && count < bufSize-1){
+        fread(&c, 1, 1, file);
+        buffer[count++] = (char)c;
+    }
+
+    buffer[count] = '\0';
+    return buffer;
+}
+uint32_t readULEB128(FILE *file){
+    uint32_t result = 0;
+    int shift = 0;
+    uint8_t byte;
+
+    while(1){
+        fread(&byte, 1, 1, file);
+        result |= (byte & 0x7F) << shift;
+
+        if((byte & 0x80) == 0)break;
+        shift +=7;
+    }
+    return result;
+}
+/*int binaryConvert(uint32_t num, uint32_t size){
     uint32_t binary[size];
     uint32_t i = 0;
     
@@ -187,8 +225,8 @@ uint32_t binaryConvert(uint32_t num, uint32_t size){
         i++;
     }
 
-    for(int j = size-1;j > 0;){
-        printf("%d", binary[j--]);
+    for(int j = 0;j < size; ){
+        printf("%d", binary[j++]);
     }
-
-}
+    return 0;
+}*/
