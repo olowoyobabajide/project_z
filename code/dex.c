@@ -10,6 +10,83 @@ void dexstringData(char *dex);
 int binaryConvert(uint32_t num, uint32_t size);
 uint32_t readULEB128(FILE *file);
 char* readDexString(FILE *file);
+
+struct DangerousString {
+    const char *category;
+    const char *string;
+    const char *reason;
+};
+
+struct DangerousString watchlist[55] = {
+    // --- Privilege Escalation / Rooting ---
+    {"Privilege Escalation", "su", "Potential root command or binary"},
+    {"Privilege Escalation", "root", "May indicate root detection or privilege escalation"},
+    {"Privilege Escala tion", "busybox", "Busybox often bundled with rooting tools"},
+    {"Privilege Escalation", "magisk", "Magisk root manager detection"},
+    {"Privilege Escalation", "supersu", "SuperSU root manager detection"},
+    {"Privilege Escalation", "setuid", "Setting user ID, privilege abuse"},
+    {"Privilege Escalation", "chmod", "Altering file permissions"},
+    {"Privilege Escalation", "chown", "Changing file ownership"},
+    {"Privilege Escalation", "mount", "Mounting file systems, potential rootkit"},
+    {"Privilege Escalation", "sh", "Direct shell execution"},
+
+    // --- Sensitive File Paths ---
+    {"Sensitive File", "/system/bin/sh", "Direct shell execution path"},
+    {"Sensitive File", "/system/xbin/su", "su binary location"},
+    {"Sensitive File", "/data/local/tmp", "Temporary storage, malware often hides payloads here"},
+    {"Sensitive File", "/proc/", "Accessing process info, potential data leak"},
+    {"Sensitive File", "/etc/passwd", "Unix password file"},
+    {"Sensitive File", "/etc/shadow", "Unix shadow passwords"},
+
+    // --- Dangerous Android Permissions ---
+    {"Dangerous Permission", "android.permission.SEND_SMS", "May send SMS without user knowledge"},
+    {"Dangerous Permission", "android.permission.RECEIVE_SMS", "May intercept SMS"},
+    {"Dangerous Permission", "android.permission.CALL_PHONE", "May place calls without consent"},
+    {"Dangerous Permission", "android.permission.READ_SMS", "Reads SMS content"},
+    {"Dangerous Permission", "android.permission.WRITE_SMS", "Modifies SMS database"},
+    {"Dangerous Permission", "android.permission.RECORD_AUDIO", "Can spy on microphone"},
+    {"Dangerous Permission", "android.permission.CAMERA", "Can spy on camera"},
+    {"Dangerous Permission", "android.permission.WRITE_SETTINGS", "Modifies device settings"},
+    {"Dangerous Permission", "android.permission.SYSTEM_ALERT_WINDOW", "Overlay attacks / phishing windows"},
+
+    // --- Network Abuse / C2 Communication ---
+    {"Network Abuse", "http://", "Unencrypted connection, potential C2 traffic"},
+    {"Network Abuse", "https://", "Encrypted connection, check for hardcoded domains"},
+    {"Network Abuse", "ftp://", "FTP connection, unusual for apps"},
+    {"Network Abuse", "socket://", "Direct socket communication"},
+    {"Network Abuse", "127.0.0.1", "Localhost binding, backdoor possibility"},
+    {"Network Abuse", "192.168.", "Private network IP, suspicious hardcoding"},
+    {"Network Abuse", "10.", "Private network IP, suspicious hardcoding"},
+    {"Network Abuse", "172.", "Private network IP, suspicious hardcoding"},
+    {"Network Abuse", ".ru", "Russian domain, often linked with C2"},
+    {"Network Abuse", ".cn", "Chinese domain, often linked with C2"},
+    {"Network Abuse", ".biz", "Suspicious TLD, often abused"},
+
+    // --- Data Exfiltration / Credential Theft ---
+    {"Data Exfiltration", "getDeviceId", "Accessing unique device identifier"},
+    {"Data Exfiltration", "android_id", "Tracking device with Android ID"},
+    {"Data Exfiltration", "telephony", "Accessing telephony services"},
+    {"Data Exfiltration", "accounts", "May steal account info"},
+    {"Data Exfiltration", "IMEI", "Grabbing device IMEI"},
+    {"Data Exfiltration", "ICCID", "Grabbing SIM ICCID"},
+    {"Data Exfiltration", "location", "Tracking user location"},
+    {"Data Exfiltration", "keystore", "Targeting secure storage"},
+    {"Data Exfiltration", "password", "Hardcoded password handling"},
+    {"Data Exfiltration", "token", "API or session token"},
+    {"Data Exfiltration", "encryptionKey", "Hardcoded encryption keys"},
+
+    // --- Obfuscation / Malware Tricks ---
+    {"Obfuscation", "Base64", "Often used to hide payloads"},
+    {"Obfuscation", "AES", "Encryption reference, check for misuse"},
+    {"Obfuscation", "DES", "Weak encryption reference"},
+    {"Obfuscation", "xor", "Obfuscation with XOR"},
+    {"Obfuscation", "payload", "Malware payload reference"},
+    {"Obfuscation", "decode", "Decoding routines, hiding data"},
+    {"Obfuscation", "dexclassloader", "Dynamic code loading"},
+    {"Obfuscation", "loadLibrary", "Loading external native code"}
+};
+
+
 int main()
 {
     dexheaderScan("classes.dex");
@@ -176,10 +253,17 @@ void dexstringData(char *dex){
         fseek(file, current_string_offset[j], SEEK_SET);
         char *str = readDexString(file);
         if(str){
-            fprintf(dexLog, "Read str: %s\n", str);
+            int a = 0;
+            while (a < 30){
+                if((strpbrk(watchlist[a].string, str)) != NULL){
+                    dexPrint("String found!: %s\n", watchlist[a].string, dexLog);
+                    dexPrint("Category: %s\n", watchlist[a].category, dexLog);
+                    dexPrint("Reason: %s\n", watchlist[a].reason, dexLog);
+                }
+                a++;
+            }
             free(str);
         }
-        
     }
     fclose(dexLog);
     fclose(file);
@@ -215,18 +299,3 @@ uint32_t readULEB128(FILE *file){
     }
     return result;
 }
-/*int binaryConvert(uint32_t num, uint32_t size){
-    uint32_t binary[size];
-    uint32_t i = 0;
-    
-    while(i < size){
-        binary[i] = num & 1;
-        num = num >> 1;
-        i++;
-    }
-
-    for(int j = 0;j < size; ){
-        printf("%d", binary[j++]);
-    }
-    return 0;
-}*/
