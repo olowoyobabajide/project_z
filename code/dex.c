@@ -6,10 +6,14 @@
  */
 
 void dexPrint(char *str, uint32_t value, FILE *log);
+void dexheaderScan(char *dex);
 void dexstringData(char *dex);
-int binaryConvert(uint32_t num, uint32_t size);
-uint32_t readULEB128(FILE *file);
 char* readDexString(FILE *file);
+uint32_t readULEB128(FILE *file);
+void typeIdTable(char *dex);
+void methodIdTable(char *dex, char**string_data_array);
+void fieldIdTable(char *dex);
+
 
 struct DangerousString {
     const char *category;
@@ -89,8 +93,10 @@ struct DangerousString watchlist[55] = {
 
 int main()
 {
-    dexheaderScan("classes.dex");
-    dexstringData("classes.dex");
+    //dexheaderScan("classes.dex");
+    //dexstringData("classes.dex");
+    typeIdTable("classes.dex");
+    //methodIdTable("classes.dex");
 
     return 0;
 }
@@ -112,7 +118,7 @@ void dexPrint(char *str, uint32_t value, FILE *log){
         fclose(log);
     }
 
-    snprintf(buffer, size+1, str, value);
+    snprintf(buffer, size + 1, str, value);
     fprintf(log, "%s", buffer);
 
     free(buffer);
@@ -254,11 +260,9 @@ void dexstringData(char *dex){
         char *str = readDexString(file);
         if(str){
             int a = 0;
-            while (a < 30){
-                if((strpbrk(watchlist[a].string, str)) != NULL){
-                    dexPrint("String found!: %s\n", watchlist[a].string, dexLog);
-                    dexPrint("Category: %s\n", watchlist[a].category, dexLog);
-                    dexPrint("Reason: %s\n", watchlist[a].reason, dexLog);
+            while (a < 55){
+                if((strstr(str, watchlist[a].string)) != NULL){
+                    fprintf(dexLog, "[dexHeader] String found!: %s, Category: %s, Reason: %s\n", watchlist[a]. string, watchlist[a].category, watchlist[a].reason);
                 }
                 a++;
             }
@@ -298,4 +302,131 @@ uint32_t readULEB128(FILE *file){
         shift +=7;
     }
     return result;
+}
+
+void typeIdTable(char *dex){
+
+    FILE *file, *dexLog;
+
+    if((dexLog = fopen("testLog.txt", "a+")) == NULL){
+        fprintf(stderr, "Can't create dex log file\n");
+        fclose(dexLog);
+    }
+    if((file = fopen(dex, "rb"))== NULL){
+        fprintf(stderr, "Unable to read *.dex file\n");
+    }
+
+    uint32_t string_size, string_id_off;
+    fseek(file, 0x38, SEEK_SET);
+    fread(&string_size, 4, 1, file);
+    
+    //string  offset
+    fseek(file, 0x3C, SEEK_SET);
+    
+    int current_string_offset[string_size];
+    for(uint32_t i = 0; i < string_size; i++)
+    {
+        fread(&string_id_off, 4, 1, file);
+        current_string_offset[i] = string_id_off;
+    }
+    static char **string_data_array;
+    char *str;
+    string_data_array = malloc(string_size * sizeof(char*));
+    if (string_data_array == NULL){
+        printf("Could not allocate string\n");
+    }
+    for(uint32_t j = 0; j < string_size; j++){
+        fseek(file, current_string_offset[j], SEEK_SET);
+        str = readDexString(file);
+        if(str){
+            string_data_array[j] = str;
+            //free(str);
+        } 
+    }
+    //printf("%s\n", string_data_array[8001]);
+    
+    uint32_t type_ids_size, type_ids_off;
+    //type ids size
+    fseek(file, 0x40, SEEK_SET);
+    fread(&type_ids_size, 4, 1, file);
+
+    fseek(file, 0x44, SEEK_SET);
+    fread(&type_ids_off, 4, 1, file);
+
+    fseek(file, type_ids_off, SEEK_SET);
+    int *string_index;
+
+    string_index = malloc(sizeof(int) * type_ids_size);
+    if(string_index == NULL){
+        printf("Could not allocate memory\n");
+    }
+    for(int i = 0; i < type_ids_size; i++){
+        uint32_t offset;
+        fread(&offset, 4, 1, file);
+        string_index[i] = offset;
+        fprintf(dexLog, "[Type] index=%d, decriptor=%s\n", string_index[i], string_data_array[string_index[i]]);
+    }
+    methodIdTable("classes.dex", string_data_array);
+    free(string_index);
+    for(int a = 0; a < string_size; a++){
+        free(string_data_array[a]);
+    }
+    free(string_data_array);
+
+    free(dexLog);
+}
+
+void methodIdTable(char *dex, char**string_data_array){
+
+    FILE *file, *dexLog;
+
+    if((dexLog = fopen("testLog.txt", "a+")) == NULL){
+        fprintf(stderr, "Can't create dex log file\n");
+        fclose(dexLog);
+    }
+    if((file = fopen(dex, "rb"))== NULL){
+        fprintf(stderr, "Unable to read *.dex file\n");
+    }
+
+    uint32_t method_ids_off, method_ids_size;
+
+    fseek(file, 0x58, SEEK_SET);
+    fread(&method_ids_size, 4, 1, file);
+
+    fseek(file, 0x5C, SEEK_SET);
+    fread(&method_ids_off, 4, 1, file);
+
+    fseek(file, method_ids_off, SEEK_SET);
+    uint32_t *class_idx, *proto_idx, *name_idx;
+
+    printf("%d\n", method_ids_size);
+
+    class_idx = malloc(sizeof(int) * method_ids_size);
+    proto_idx = malloc(sizeof(int) * method_ids_size);
+    name_idx = malloc(sizeof(int) * method_ids_size);
+
+    for(int i = 0; i < method_ids_size; i++){
+        unsigned long long buffer;
+
+        // copying bytes method...
+        fread(&buffer, 8, 1, file);
+        unsigned long long *p = &buffer;
+        memcpy(&class_idx[i], &buffer, 2);
+        memcpy(&proto_idx[i], (char*)&buffer+2, 2);
+        memcpy(&name_idx[i], (char*)&buffer+4, 4);
+    
+    }
+    for (int a = 0; a < method_ids_size; a++){
+        fprintf(dexLog, "[METHOD] name: %s ", string_data_array[name_idx[a]]);
+        fprintf(dexLog, "class: %s\n", string_data_array[class_idx[a]]);
+    }
+    free(class_idx);
+    free(name_idx);
+    free(proto_idx);
+    fclose(dexLog);
+    fclose(file);
+}
+
+void fieldIdTable(char *dex){
+
 }

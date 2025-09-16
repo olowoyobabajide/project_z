@@ -17,6 +17,5 @@
 int analyse_per(char *a);
 void tag_perm(char *a);
 int apk_check(char *apk);
-void dexheaderScan(char *dex);
 
 #endif
