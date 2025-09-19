@@ -15,6 +15,7 @@
 		"files.associations": {
 			"typeinfo": "c",
 			"text_encoding": "c"
-		}
+		},
+		"geminicodeassist.agentDebugMode": true
 	}
 }

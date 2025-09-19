@@ -454,7 +454,6 @@ int analyse_per(char *a)
     parsedoc("services.xml", "root", "service", log, parseService);
     parsedoc("receiver.xml", "root", "receiver", log, parseReceiver);
     
-  
 
     tag tags[] = {{"uses-permission", "permission.txt"}, {"application", "app.txt"}};
     
