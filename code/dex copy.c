@@ -16,39 +16,95 @@ void fieldIdTable(char *, FILE*,uint32_t *, char **);
 void classDefTable(char *, FILE*,uint32_t *, char **);
 void class_data_item(char *, FILE*,uint32_t *, uint32_t );
 int logdex();
-void freeKeepMemory(keepMemory mem);
-
+struct DangerousString {
+    const char *category;
+    const char *string;
+    const char *reason;
+};
 keepMemory dataInMemory;
+
+struct DangerousString watchlist[55] = {
+    // --- Privilege Escalation / Rooting ---
+    {"Privilege Escalation", "su", "Potential root command or binary"},
+    {"Privilege Escalation", "root", "May indicate root detection or privilege escalation"},
+    {"Privilege Escala tion", "busybox", "Busybox often bundled with rooting tools"},
+    {"Privilege Escalation", "magisk", "Magisk root manager detection"},
+    {"Privilege Escalation", "supersu", "SuperSU root manager detection"},
+    {"Privilege Escalation", "setuid", "Setting user ID, privilege abuse"},
+    {"Privilege Escalation", "chmod", "Altering file permissions"},
+    {"Privilege Escalation", "chown", "Changing file ownership"},
+    {"Privilege Escalation", "mount", "Mounting file systems, potential rootkit"},
+    {"Privilege Escalation", "sh", "Direct shell execution"},
+
+    // --- Sensitive File Paths ---
+    {"Sensitive File", "/system/bin/sh", "Direct shell execution path"},
+    {"Sensitive File", "/system/xbin/su", "su binary location"},
+    {"Sensitive File", "/data/local/tmp", "Temporary storage, malware often hides payloads here"},
+    {"Sensitive File", "/proc/", "Accessing process info, potential data leak"},
+    {"Sensitive File", "/etc/passwd", "Unix password file"},
+    {"Sensitive File", "/etc/shadow", "Unix shadow passwords"},
+
+    // --- Dangerous Android Permissions ---
+    {"Dangerous Permission", "android.permission.SEND_SMS", "May send SMS without user knowledge"},
+    {"Dangerous Permission", "android.permission.RECEIVE_SMS", "May intercept SMS"},
+    {"Dangerous Permission", "android.permission.CALL_PHONE", "May place calls without consent"},
+    {"Dangerous Permission", "android.permission.READ_SMS", "Reads SMS content"},
+    {"Dangerous Permission", "android.permission.WRITE_SMS", "Modifies SMS database"},
+    {"Dangerous Permission", "android.permission.RECORD_AUDIO", "Can spy on microphone"},
+    {"Dangerous Permission", "android.permission.CAMERA", "Can spy on camera"},
+    {"Dangerous Permission", "android.permission.WRITE_SETTINGS", "Modifies device settings"},
+    {"Dangerous Permission", "android.permission.SYSTEM_ALERT_WINDOW", "Overlay attacks / phishing windows"},
+
+    // --- Network Abuse / C2 Communication ---
+    {"Network Abuse", "http://", "Unencrypted connection, potential C2 traffic"},
+    {"Network Abuse", "https://", "Encrypted connection, check for hardcoded domains"},
+    {"Network Abuse", "ftp://", "FTP connection, unusual for apps"},
+    {"Network Abuse", "socket://", "Direct socket communication"},
+    {"Network Abuse", "127.0.0.1", "Localhost binding, backdoor possibility"},
+    {"Network Abuse", "192.168.", "Private network IP, suspicious hardcoding"},
+    {"Network Abuse", "10.", "Private network IP, suspicious hardcoding"},
+    {"Network Abuse", "172.", "Private network IP, suspicious hardcoding"},
+    {"Network Abuse", ".ru", "Russian domain, often linked with C2"},
+    {"Network Abuse", ".cn", "Chinese domain, often linked with C2"},
+    {"Network Abuse", ".biz", "Suspicious TLD, often abused"},
+
+    // --- Data Exfiltration / Credential Theft ---
+    {"Data Exfiltration", "getDeviceId", "Accessing unique device identifier"},
+    {"Data Exfiltration", "android_id", "Tracking device with Android ID"},
+    {"Data Exfiltration", "telephony", "Accessing telephony services"},
+    {"Data Exfiltration", "accounts", "May steal account info"},
+    {"Data Exfiltration", "IMEI", "Grabbing device IMEI"},
+    {"Data Exfiltration", "ICCID", "Grabbing SIM ICCID"},
+    {"Data Exfiltration", "location", "Tracking user location"},
+    {"Data Exfiltration", "keystore", "Targeting secure storage"},
+    {"Data Exfiltration", "password", "Hardcoded password handling"},
+    {"Data Exfiltration", "token", "API or session token"},
+    {"Data Exfiltration", "encryptionKey", "Hardcoded encryption keys"},
+
+    // --- Obfuscation / Malware Tricks ---
+    {"Obfuscation", "Base64", "Often used to hide payloads"},
+    {"Obfuscation", "AES", "Encryption reference, check for misuse"},
+    {"Obfuscation", "DES", "Weak encryption reference"},
+    {"Obfuscation", "xor", "Obfuscation with XOR"},
+    {"Obfuscation", "payload", "Malware payload reference"},
+    {"Obfuscation", "decode", "Decoding routines, hiding data"},
+    {"Obfuscation", "dexclassloader", "Dynamic code loading"},
+    {"Obfuscation", "loadLibrary", "Loading external native code"}
+};
 
 int main()
 {
 
     logdex();
-    printf("main: before analyseDex\n"); fflush(stdout);
-    analyseDex(
-        dataInMemory.strings, dataInMemory.strings_count,
-        dataInMemory.type_descriptors, dataInMemory.type_descriptors_count,
-        dataInMemory.class_definitions, dataInMemory.class_definitions_count,
-        dataInMemory.method_definitions, dataInMemory.method_definitions_count,
-        dataInMemory.method_class, dataInMemory.method_class_count,
-        dataInMemory.super_idx, dataInMemory.super_idx_count
-    );
-    printf("main: after analyseDex\n"); fflush(stdout);
-    freeKeepMemory(dataInMemory);
     /*if (fork() == 0){
-        analyseDex(
-        dataInMemory.strings, dataInMemory.strings_count,
-        dataInMemory.type_descriptors, dataInMemory.type_descriptors_count,
-        dataInMemory.class_definitions, dataInMemory.class_definitions_count,
-        dataInMemory.method_definitions, dataInMemory.method_definitions_count,
-        dataInMemory.method_class, dataInMemory.method_class_count,
-        dataInMemory.super_idx, dataInMemory.super_idx_count
-    );
-        freeKeepMemory(dataInMemory);
+        analyseDex(dataInMemory.strings, dataInMemory.type_descriptors, dataInMemory.class_definitions, dataInMemory.method_definitions, dataInMemory.method_class, dataInMemory.super_idx);
         exit(0);
     }
     else{
+        //dexheaderScan("classes.dex");
+        //dexstringData("classes.dex");
         logdex();
+        printf("done\n");
         wait(0);
     }*/
     return 0;
@@ -78,7 +134,6 @@ void dexPrint(char *str, uint32_t value, FILE *log){
 }
 
 void dexheaderScan(char *dex, FILE *dexLog){
-    printf("dexheaderScan: called\n"); fflush(stdout);
 
     FILE *file;
     bool safe_dex = true;
@@ -180,8 +235,7 @@ void dexheaderScan(char *dex, FILE *dexLog){
  }
 
 void dexstringData(char *dex, FILE *dexLog){
-    printf("dexstringData: called\n"); fflush(stdout);
-
+    
     FILE *file;
 
     if((file = fopen(dex, "rb"))== NULL){
@@ -195,34 +249,30 @@ void dexstringData(char *dex, FILE *dexLog){
     //string  offset
     fseek(file, 0x3C, SEEK_SET);
     
-    int *current_string_offset = malloc(string_size * sizeof(int));
-    if (!current_string_offset) {
-        fprintf(stderr, "Failed to allocate memory for string offsets\n");
-        fclose(file);
-        return;
-    }
+    int current_string_offset[string_size];
     for(uint32_t i = 0; i < string_size; i++)
     {
         fread(&string_id_off, 4, 1, file);
         current_string_offset[i] = string_id_off;
     }
-    dataInMemory.strings = malloc(string_size * sizeof(char*));
-    dataInMemory.strings_count = string_size;
-    if (!dataInMemory.strings) {
-        fprintf(stderr, "Failed to allocate memory for strings array\n");
-        free(current_string_offset);
-        fclose(file);
-        return;
-    }
+
+    /*dataInMemory.strings = malloc(sizeof(char*) * string_size);
+    if(dataInMemory.strings == NULL){
+        perror("Error allocating memory for string size\n");
+        goto cleanup;
+    }*/
     for(uint32_t j = 0; j < string_size; j++){
         fseek(file, current_string_offset[j], SEEK_SET);
         char *str = readDexString(file);
         if(str){
-            dataInMemory.strings[j] = str;
-            fprintf(dexLog, "%s\n", dataInMemory.strings[j]);
-        }
+            //dataInMemory.strings[j] = str;
+            fprintf(dexLog, "%s\n", str);
+            /*if((strstr(str, watchlist[a].string)) != NULL){
+                fprintf(dexLog, "[dexHeader] String found!:%s, Category:%s, Reason:%s\n", watchlist[a]. string, watchlist[a].category, watchlist[a].reason);
+            }*/
+            }
+            free(str);
     }
-    free(current_string_offset);
 
     cleanup:
         fclose(file);
@@ -260,7 +310,6 @@ uint32_t readULEB128(FILE *file){
 }
 
 void typeIdTable(char *dex, FILE *dexLog){
-    printf("typeIdTable: called\n"); fflush(stdout);
 
     FILE *file;
 
@@ -299,7 +348,7 @@ void typeIdTable(char *dex, FILE *dexLog){
             string_data_array[j] = str;
         } 
     }
-    free(current_string_offset); // Free the offset array now that I am done with it
+    free(current_string_offset); // Free the offset array now that we're done with it
     
     uint32_t type_ids_size, type_ids_off;
     //type ids size
@@ -317,30 +366,29 @@ void typeIdTable(char *dex, FILE *dexLog){
         perror("Error allocating memory for type ids size\n");
         goto cleanup;
     }
-    
-    dataInMemory.type_descriptors = malloc(type_ids_size * sizeof(char*));
-    dataInMemory.type_descriptors_count = type_ids_size;
+    /*dataInMemory.type_descriptors = malloc(sizeof(char*) * type_ids_size);
+    if(dataInMemory.type_descriptors == NULL){
+        perror("Error allocating memory for string size\n");
+        goto cleanup;
+    }*/
     for(uint32_t i = 0; i < type_ids_size; i++){
         uint32_t offset;
         fread(&offset, 4, 1, file);
         string_index[i] = offset;
-        dataInMemory.type_descriptors[i] = string_data_array[string_index[i]];
-        fprintf(dexLog, "[TYPE] index=%d, decriptor=%s\n", string_index[i], dataInMemory.type_descriptors[i]);
+        //dataInMemory.type_descriptors[i] = string_data_array[string_index[i]];
+        //printf("%s\n", dataInMemory.type_descriptors[i]);
+        fprintf(dexLog, "[TYPE] index=%d, decriptor=%s\n", string_index[i], string_data_array[string_index[i]]);
     }
-    printf("MethodIdTable: calling methodIdTable\n"); fflush(stdout);
-    methodIdTable("classes.dex", dexLog, string_index, dataInMemory.strings);
-    printf("MethodIdTable: called MethodIdTable\n"); fflush(stdout);
-    printf("typeIdTable: calling fieldIdTable\n"); fflush(stdout);
-    fieldIdTable("classes.dex", dexLog, string_index, dataInMemory.strings);
-    printf("typeIdTable: calling classDefTable\n"); fflush(stdout);
-    classDefTable("classes.dex", dexLog, string_index, dataInMemory.strings);
+    methodIdTable("classes.dex", dexLog, string_index, string_data_array);
+    fieldIdTable("classes.dex", dexLog, string_index, string_data_array);
+    classDefTable("classes.dex", dexLog, string_index, string_data_array);
  
     cleanup:
-        /*free(string_index);
+        free(string_index);
         for(uint32_t a = 0; a < string_size; a++){
             if (string_data_array[a])free(string_data_array[a]);
         }
-        free(string_data_array);*/
+        free(string_data_array);
         fclose(file);
 }
 
@@ -379,38 +427,33 @@ void methodIdTable(char *dex, FILE*dexLog, uint32_t *type_index, char **string_d
         fread(&proto_idx[i], sizeof(uint16_t), 1, file);
         fread(&name_idx[i], sizeof(uint32_t), 1, file);
     }
-    /*uint32_t *method_idx;
+    uint32_t *method_idx;
     method_idx = malloc(sizeof(uint32_t) * method_ids_size);
     if(method_idx == NULL){
         perror("Error allocating memory for method ids sizes\n");
         goto cleanup;
+    }
+
+    /*dataInMemory.method_definitions = malloc(sizeof(char*) * method_ids_size);
+    dataInMemory.method_class = malloc(sizeof(char*) * method_ids_size);
+
+    if(dataInMemory.method_definitions == NULL || dataInMemory.method_class == NULL){
+        perror("Error allocating memory for method_ids_size\n");
+        goto cleanup;
     }*/
-    uint32_t *type_idx_val;
-    type_idx_val = malloc(sizeof(uint32_t)*method_ids_size);
-
-    dataInMemory.method_definitions = malloc(method_ids_size * sizeof(char*));
-    dataInMemory.method_definitions_count = method_ids_size;
-    dataInMemory.method_class = malloc(method_ids_size * sizeof(char*));
-    dataInMemory.method_class_count = method_ids_size;
-
-    for (uint32_t a = 0; a < method_ids_size; a++) {
-        
-        type_idx_val[a] = type_index[class_idx[a]];
-        //printf("hello, I am in methoid\n");
-        dataInMemory.method_definitions[a] = string_data_array[name_idx[a]];
-        //printf("hello, I am in methoid2\n");
-        //printf("%s\n", dataInMemory.method_definitions[a]);
-        dataInMemory.method_class[a] = string_data_array[type_idx_val[a]];
-        //printf("%s\n", dataInMemory.method_definitions[a]);
-        fprintf(dexLog, "[METHOD] name:%s ", dataInMemory.method_definitions[a]);
-        fprintf(dexLog, "class:%s\n", dataInMemory.method_class[a]);
+    for (uint32_t a = 0; a < method_ids_size; a++){
+        method_idx[a] = type_index[class_idx[a]];
+        //dataInMemory.method_definitions[a] = string_data_array[name_idx[a]];
+        //dataInMemory.method_class[a] = string_data_array[method_idx[a]];
+        fprintf(dexLog, "[METHOD] name:%s ", string_data_array[name_idx[a]]);
+        fprintf(dexLog, "class:%s\n", string_data_array[method_idx[a]]);
     }
 
     cleanup:
-        //free(class_idx);
-        //free(name_idx);
+        free(class_idx);
+        free(name_idx);
         free(proto_idx);
-        //free(method_idx);
+        free(method_idx);
         fclose(file);
 }
 
@@ -491,13 +534,11 @@ void classDefTable(char *dex, FILE*dexLog,uint32_t *class_index, char **string_d
     fread(&class_defs_off, 4, 1, file);
 
     fseek(file, class_defs_off, SEEK_SET);
-    uint32_t *class_idx, *access_flags, *class_data_off, *superclass_idx;
+    uint32_t *class_idx, *access_flags, *class_data_off;
     class_idx = malloc(sizeof(uint32_t) * class_defs_size);
     access_flags = malloc(sizeof(uint32_t) * class_defs_size);
     class_data_off = malloc(sizeof(uint32_t) * class_defs_size);
-    superclass_idx = malloc(sizeof(uint32_t) * class_defs_size);
-
-    if(class_idx == NULL || access_flags == NULL || class_data_off == NULL || superclass_idx == NULL ){
+    if(class_idx == NULL || access_flags == NULL || class_data_off == NULL){
         perror("Error allocating memory for class defs sizes\n");
         goto cleanup;
     }
@@ -506,17 +547,10 @@ void classDefTable(char *dex, FILE*dexLog,uint32_t *class_index, char **string_d
         // Read the fields of the class_def_item directly.
         fread(&class_idx[i], sizeof(uint32_t), 1, file);
         fread(&access_flags[i], sizeof(uint32_t), 1, file);
-        fread(&superclass_idx[i], sizeof(uint32_t), 1, file);
-        fseek(file, 12, SEEK_CUR); // Skip interfaces_off, source_file_idx, annotations_off
+        fseek(file, 16, SEEK_CUR); // Skip superclass_idx, interfaces_off, source_file_idx, annotations_off
         fread(&class_data_off[i], sizeof(uint32_t), 1, file);
         fseek(file, 4, SEEK_CUR); // Skip static_values_off
     }
-    
-    dataInMemory.class_definitions = malloc(class_defs_size * sizeof(char*));
-    dataInMemory.class_definitions_count = class_defs_size;
-    dataInMemory.super_idx = malloc(class_defs_size * sizeof(char*));
-    dataInMemory.super_idx_count = class_defs_size;
-
     uint32_t *c_index;
     c_index = malloc(sizeof(uint32_t)*class_defs_size);
     if(c_index == NULL){
@@ -525,19 +559,14 @@ void classDefTable(char *dex, FILE*dexLog,uint32_t *class_index, char **string_d
     }
     for(uint32_t j = 0; j < class_defs_size; j++){
         c_index[j] = class_index[class_idx[j]];
-
-        dataInMemory.class_definitions[j] = dataInMemory.strings[c_index[j]];
-        dataInMemory.super_idx[j] = dataInMemory.strings[superclass_idx[j]];
-
-        fprintf(dexLog, "[CLASS] name: %s, ", dataInMemory.class_definitions[j]);
+        fprintf(dexLog, "[CLASS] name: %s, ", string_data_array[c_index[j]]);
         fprintf(dexLog, "flags: %u, \n", access_flags[j]);
     }
     class_data_item("classes.dex", dexLog, class_data_off, class_defs_size);
 
     cleanup:
-        /*free(c_index);
-        free(class_idx);*/
-        free(superclass_idx);
+        free(c_index);
+        free(class_idx);
         free(access_flags);
         free(class_data_off);
         fclose(file);
@@ -595,58 +624,19 @@ cleanup:
 }
 
 int logdex(){
-    printf("logdex: called\n"); fflush(stdout);
-    FILE *dexLog = fopen("testLog.txt", "w");
-    if(dexLog == NULL){
-        perror("logdex: fopen");
-        return EXIT_FAILURE;
+    //This function handles logging
+    FILE *dexLog;
+
+    if((dexLog = fopen("testLog.txt", "w")) == NULL){
+        fprintf(stderr, "Can't create dex log file\n");
+        fclose(dexLog);
     }
-    printf("logdex: opened log file\n"); fflush(stdout);
-
-    printf("logdex: calling dexheaderScan\n"); fflush(stdout);
     dexheaderScan("classes.dex", dexLog);
-    printf("logdex: calling dexstringData\n"); fflush(stdout);
     dexstringData("classes.dex", dexLog);
-    printf("logdex: calling typeIdTable\n"); fflush(stdout);
     typeIdTable("classes.dex", dexLog);
-    printf("logdex: finished all calls\n"); fflush(stdout);
-
-    fclose(dexLog);
     return(EXIT_SUCCESS);
 }
 
+void freeKeepMemory(){
 
-
-void freeKeepMemory(keepMemory mem){
-    if (mem.strings) {
-        for(uint32_t i = 0; i < mem.strings_count; i++){
-            free(mem.strings[i]);
-        }
-        free(mem.strings);
-    }
-    if (mem.method_definitions) {
-        for(uint32_t i = 0; i < mem.method_definitions_count; i++){
-            //free(mem.method_definitions[i]);
-        }
-        free(mem.method_definitions);
-    }
-    if (mem.method_class) {
-        for(uint32_t i = 0; i < mem.method_class_count; i++){
-            //free(mem.method_class[i]);
-        }
-        free(mem.method_class);
-    }
-    if (mem.class_definitions) {
-        for(uint32_t i = 0; i < mem.class_definitions_count; i++){
-            //free(mem.class_definitions[i]);
-        }
-        free(mem.class_definitions);
-    }
-    if (mem.super_idx) {
-        for(uint32_t i = 0; i < mem.super_idx_count; i++){
-            //free(mem.super_idx[i]);
-        }
-        free(mem.super_idx);
-    }
-    
 }

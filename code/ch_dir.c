@@ -10,8 +10,8 @@
 #include <libgen.h>
 #define PATH_MAX 256
 
-int apk_check(char *apk);
 static int nfile(const char *path, const struct stat *sb, int typeflag, struct FTW *ftbuf);
+//int apk_check(char *apk);
 
 int apk_check(char *apk)
 {
