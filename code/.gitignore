@@ -1,11 +1,8 @@
 /temp
 *.xml
-test.c
 *.txt
-pomodoro.c
 *.out
 /.vscode
 /mini
 /build
 *.dex
-process.c

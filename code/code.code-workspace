@@ -14,7 +14,8 @@
 		"zenMode.restore": false,
 		"files.associations": {
 			"typeinfo": "c",
-			"text_encoding": "c"
+			"text_encoding": "c",
+			"string.h": "c"
 		},
 		"geminicodeassist.agentDebugMode": true
 	}

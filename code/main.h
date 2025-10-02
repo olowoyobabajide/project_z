@@ -15,12 +15,22 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <libxml/parser.h> 
+#include <libxml/tree.h>
+#include <time.h>
 
-#define PATH_MAX 256
+//#define PATH_MAX 256
 int analyse_per(char *a);
 void tag_perm(char *a);
 int apk_check(char *apk);
 
+
+// check dex
+//int dexfile(const char *path, const struct stat *sb, int typeflag, struct FTW *ftbuf);
+int filecheckDex(char *file_path);
+
+
+int dexScan(char *);
 void analyseDex(
     char **str, int str_count,
     char **typ, int typ_count,
@@ -43,5 +53,5 @@ typedef struct keepinmemory {
     char **super_idx;
     uint32_t super_idx_count;
 } keepMemory;
-
+void unsafeFunc(char *dex);
 #endif
