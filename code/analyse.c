@@ -1,8 +1,8 @@
 #include "main.h"
-#include <stdbool.h>
 #include <libxml/parser.h> 
 #include <libxml/tree.h>
-
+void tag_perm(char *a);
+int analyse_per(char *a);
 //gcc main.c analyse.c -o fs $(pkg-config --cflags --libs libxml-2.0)  Compiling
 
 //extern char buffer[PATH_MAX];
@@ -438,7 +438,7 @@ void parseProvider(xmlDocPtr, xmlNodePtr cur)
     fclose(log);
 }
 
-int analyse_per(char *a)
+int analyse_per(char *file)
 {
     char perm[PATH_MAX];
     bool inside_intent = false;
@@ -446,14 +446,14 @@ int analyse_per(char *a)
     FILE *AndroidManifest, *file_point[2];
 
      
-    if ((AndroidManifest = fopen("AndroidManifest.xml", "rb")) == NULL)
+    if ((AndroidManifest = fopen(file, "r")) == NULL)
     {
         perror("The AndroidManifest does not exist\n");
         return EXIT_FAILURE;
     }
 
     printf("before parsetag call\n");
-    parsedoc("AndroidManifest.xml", "manifest", "application", parsetag);
+    parsedoc(file, "manifest", "application", parsetag);
     printf("Calling parseactivity\n");
     parsedoc("activity.xml", "root", "activity",  parseActivity);
     printf("Calling parseservice\n");

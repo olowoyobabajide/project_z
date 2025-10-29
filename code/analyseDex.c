@@ -120,6 +120,19 @@ void analyseDex(
     char **method, int method_count,
     char **meth_class, int meth_class_count,
     char **super_class, int super_class_count
+    /*uint16_t *code_byte,
+    uint32_t code_byte_count*/
+);
+
+void analyseDex(
+    char **str, int str_count,
+    char **typ, int typ_count,
+    char **class, int class_count,
+    char **method, int method_count,
+    char **meth_class, int meth_class_count,
+    char **super_class, int super_class_count
+    /*uint16_t *code_byte,
+    uint32_t code_byte_count*/
 ){
 
     FILE *log;
@@ -181,11 +194,18 @@ void analyseDex(
             break;
         }
     }
+    for (uint32_t i = 0; i < method_count; i++){
+        if(method[i] == "Runtime.exec"){
+            
+        }
+    }
+    
     for(u_int32_t i = 0; i < meth_class_count; i++){
     // Rule: Command Execution (HIGH)
-        if(strstr(meth_class[i], "Ljava/lang/Runtime;") && strstr(method[i], "exec")){
+        /*if(strstr(meth_class[i], "Ljava/lang/Runtime;") && strstr(method[i], "exec")){
             fprintf(log, "%s, %s\n", rule_info_database[8].category, rule_info_database[8].description);               
-        }
+        }*/
+        
         if(strstr(meth_class[i], "addJavascriptInterface")){
             fprintf(log, "%s, %s\n", rule_info_database[13].category, rule_info_database[13].description);               
         }

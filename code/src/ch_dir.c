@@ -1,12 +1,7 @@
-#define _XOPEN_SOURCE 500
-#include <stdio.h>
 #include "main.h"
-#include <stdlib.h>
-#include <sys/stat.h>
-#include <string.h>
-#include <ctype.h>
 #include <fnmatch.h>
-#include <libgen.h>
+
+int apk_check(char *apk);
 
 static int nfile(const char *path, const struct stat *sb, int typeflag, struct FTW *ftbuf);
 

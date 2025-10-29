@@ -14,5 +14,6 @@ int main(int argc, char **argv)
     apk_check(buffer);
 
     analyse_per(buffer); // For Android Manifest
-    filecheckDex(buffer); // For DEX
+    filecheckDex(buffer); // For .dex files 
+    filecheckso(buffer); // For shared object files
 }

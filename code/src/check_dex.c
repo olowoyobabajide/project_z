@@ -1,12 +1,5 @@
-#define _XOPEN_SOURCE 500
-#include <stdio.h>
 #include "main.h"
-#include <stdlib.h>
-#include <sys/stat.h>
-#include <string.h>
-#include <ctype.h>
-#include <fnmatch.h>
-#include <libgen.h>
+
 
 int dexfile(const char *path, const struct stat *sb, int typeflag, struct FTW *ftbuf);
 
@@ -24,11 +17,11 @@ int dexfile(const char *path, const struct stat *sb, int typeflag, struct FTW *f
     if(typeflag == FTW_F)
     {
         char base_path[PATH_MAX];
-        snprintf(base_path, PATH_MAX-1, "%s", path);
+        snprintf(base_path, PATH_MAX-1, "%s/temp", path);
     
         if (fnmatch("*.dex", basename(base_path), 0) == 0)
         {
-            if (sb->st_mode & 0740)
+            if (sb->st_mode & 0740)// check this with the access function instead
             {
                dexScan(base_path);
             }

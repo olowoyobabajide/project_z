@@ -1,11 +1,32 @@
-#include <stdint.h>
 #include "main.h"
+
 
 /**
  * Dex File Scanning
  * 
 */
-
+typedef struct resolvedMethod{
+    uint32_t methodIdx;
+    uint32_t accessFlags;
+    uint32_t code_off;
+}*method;
+typedef struct keepinmemory {
+    char **strings;
+    uint32_t strings_count;
+    char **type_descriptors;
+    uint32_t type_descriptors_count;
+    char **class_definitions;
+    uint32_t class_definitions_count;
+    char **method_definitions;
+    uint32_t method_definitions_count;
+    char **method_class;
+    uint32_t method_class_count;
+    char **super_idx;
+    uint32_t super_idx_count;
+    uint16_t *code_byte;
+    uint32_t code_byte_count;
+} keepMemory;
+keepMemory dataInMemory;
 void dexPrint(char *str, uint32_t value, FILE *log);
 void dexheaderScan(char *dex, FILE*);
 void dexstringData(char *dex, FILE*);
@@ -16,10 +37,10 @@ void methodIdTable(char *, FILE*, uint32_t *, char **);
 void fieldIdTable(char *, FILE*,uint32_t *, char **);
 void classDefTable(char *, FILE*,uint32_t *, char **);
 void class_data_item(char *, FILE*,uint32_t *, uint32_t );
+void code_item(char *dex, FILE *dexLog, method , method, uint32_t size);
 int logdex(char *);
-void freeKeepMemory(keepMemory mem);
 
-keepMemory dataInMemory;
+void freeKeepMemory(keepMemory mem);
 
 int dexScan(char *dex)
 {
@@ -34,25 +55,9 @@ int dexScan(char *dex)
         dataInMemory.method_class, dataInMemory.method_class_count,
         dataInMemory.super_idx, dataInMemory.super_idx_count
     );
-    unsafeFunc(dex);
     printf("main: after analyseDex\n"); fflush(stdout);
     freeKeepMemory(dataInMemory);
-    /*if (fork() == 0){
-        analyseDex(
-        dataInMemory.strings, dataInMemory.strings_count,
-        dataInMemory.type_descriptors, dataInMemory.type_descriptors_count,
-        dataInMemory.class_definitions, dataInMemory.class_definitions_count,
-        dataInMemory.method_definitions, dataInMemory.method_definitions_count,
-        dataInMemory.method_class, dataInMemory.method_class_count,
-        dataInMemory.super_idx, dataInMemory.super_idx_count
-    );
-        freeKeepMemory(dataInMemory);
-        exit(0);
-    }
-    else{
-        logdex();
-        wait(0);
-    }*/
+    
     return 0;
 }
 void dexPrint(char *str, uint32_t value, FILE *log){
@@ -543,19 +548,12 @@ void classDefTable(char *dex, FILE*dexLog,uint32_t *class_index, char **string_d
         free(class_data_off);
         fclose(file);
 }
-typedef struct resolvedMethod{
-    uint32_t methodName;
-    uint32_t accessFlags;
-    uint32_t code_off;
-}*method;
-/*struct resolvedClass{
-   
-    uint32_t direct_methods_count;
-    uint32_t virtual_methods_count;
+// typedef struct resolvedMethod{
+//     uint32_t methodIdx;
+//     uint32_t accessFlags;
+//     uint32_t code_off;
+// }*method;
 
-    struct resolvedMethod *direct_methods;
-    struct resolvedMethod *virtual_methods;
-};*/
 void class_data_item(char *dex, FILE*dexLog, uint32_t *class_data_off, uint32_t class_defs_size){
     FILE *file;
 
@@ -595,22 +593,34 @@ void class_data_item(char *dex, FILE*dexLog, uint32_t *class_data_off, uint32_t 
         }
     }
     for (uint32_t j = 0; j < class_defs_size; j++){
-        fprintf(dexLog, "[CLASS_DATA] Item %d: static_fields=%u, instance_fields=%u, direct_methods=%u, virtual_methods=%u\n",
-                j, static_fields_size[j], instance_fields_size[j], direct_methods_size[j], virtual_methods_size[j]);
+        fprintf(dexLog, "[CLASS_DATA] static_fields=%u, instance_fields=%u, direct_methods=%u, virtual_methods=%u\n", static_fields_size[j], instance_fields_size[j], direct_methods_size[j], virtual_methods_size[j]);
     }
-    
+    method direct_method;
+    method virtual_method;
     for(uint32_t a = 0; a < class_defs_size; a++){
         fseek(file, class_data_off[a], SEEK_SET);
         uint32_t num_direct = direct_methods_size[a];
+        uint32_t num_virtual = virtual_methods_size[a];
 
-        method direct_method = malloc(sizeof(method) * num_direct);
+        readULEB128(file); // Skip static_fields_size
+        readULEB128(file); // Skip instance_fields_size
+
+        direct_method = malloc(sizeof(struct resolvedMethod) * num_direct);
+        virtual_method = malloc(sizeof(struct resolvedMethod) * num_virtual);
         for(uint32_t b = 0; b < num_direct; b++){
-            direct_method[b].methodName = readULEB128(file);
-            direct_method[b].code_off =readULEB128(file);
+            direct_method[b].methodIdx = readULEB128(file);
             direct_method[b].accessFlags = readULEB128(file);
+            direct_method[b].code_off =readULEB128(file);
             //printf("%d\n", direct_method[b].code_off);
         }
+        for(uint32_t b = 0; b < num_virtual; b++){
+            virtual_method[b].methodIdx = readULEB128(file);
+            virtual_method[b].accessFlags = readULEB128(file);
+            virtual_method[b].code_off =readULEB128(file);
+        }
     }
+    printf("Calling Code Item\n");
+    code_item(dex, dexLog, direct_method, virtual_method, class_defs_size);
 cleanup:
     free(static_fields_size);
     free(instance_fields_size);
@@ -619,7 +629,7 @@ cleanup:
     fclose(file);
 }
 
-void code_item(char *dex, FILE *dexLog, int *code_off, int num){
+void code_item(char *dex, FILE *dexLog, method direct , method virtual, uint32_t size){
     FILE *file;
 
     if((file = fopen(dex, "rb"))== NULL){
@@ -627,16 +637,57 @@ void code_item(char *dex, FILE *dexLog, int *code_off, int num){
         fclose(dexLog);
         return;
     }
+    uint16_t *registers_size, *ins_size, *outs_size;
+    uint32_t *debug_info_off, *insns_size;
 
-    for(int i = 0; i < num; i++){
-        fseek(file, code_off[i], SEEK_SET);
+    registers_size = malloc(sizeof(uint16_t)*size);
+    ins_size = malloc(sizeof(uint16_t)*size);
+    outs_size = malloc(sizeof(uint16_t)*size);
+    debug_info_off = malloc(sizeof(uint32_t)*size);
+    insns_size = malloc(sizeof(uint32_t)*size);
+    uint16_t *code_bytes = malloc((sizeof(uint16_t) * 2) * size);
+    if(registers_size == NULL || ins_size == NULL || outs_size == NULL || debug_info_off == NULL || insns_size == NULL){
+        perror("Error allocating memory for class data sizes\n");
+        goto cleanup; // Centralized cleanup
+    }
+    if(code_bytes == NULL){
+        perror("Error allocating memory for insns size\n");
+        goto cleanup;
+    }
+    for(uint32_t i = 0; i < size; i++){
+        fseek(file, direct[i].code_off, SEEK_SET);
+        
+        fread(&registers_size[i], sizeof(uint16_t), 1, file);
+        fread(&ins_size[i], sizeof(uint16_t), 1, file);
+        fread(&outs_size[i], sizeof(uint16_t), 1, file);
+        fread(&debug_info_off[i], sizeof(uint32_t), 1, file);
+        fread(&insns_size[i], sizeof(uint32_t), 1, file);
+        
+        code_bytes[i] = insns_size[i];
 
     }
+    dataInMemory.code_byte = malloc((sizeof(uint16_t) * 2) * size); 
+    dataInMemory.code_byte = code_bytes;
+    dataInMemory.code_byte_count = size;
+   /* for(uint32_t j = 0; j < size; j++){
+        
+        //fprintf(dexLog, "[CODE_ITEM] %d, %d, %d, %d, %d\n", registers_size[j], ins_size[j], outs_size[j], debug_info_off[j], insns_size[j]);
+
+    }*/
+
+    cleanup:
+        free(ins_size);
+        free(registers_size);
+        free(insns_size);
+        free(outs_size);
+        free(debug_info_off);
+        //free(direct);
+        //free(virtual);
 }
 
 int logdex(char *dex){
     printf("logdex: called\n"); fflush(stdout);
-    FILE *dexLog = fopen("dexLog_" __TIME__"_" __DATE__".txt", "w");
+    FILE *dexLog = fopen("dexLog_" __TIME__"_" __DATE__".txt", "a+");
     if(dexLog == NULL){
         perror("logdex: fopen");
         return EXIT_FAILURE;

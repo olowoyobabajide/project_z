@@ -6,3 +6,5 @@
 /mini
 /build
 *.dex
+/*.sh
+*.so
