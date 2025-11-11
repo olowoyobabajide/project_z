@@ -7,11 +7,10 @@ void suid(char* file){
         perror("Unable to create  log for SUID");
     }
     char risky_perm[15];
-    char cmd[40];
+    char cmd[256];
 
-    snprintf(cmd, 40, "stat --printf=%%A %s",file);
+    snprintf(cmd, 255, "stat --printf=%%A \"%s\"",file);
 
-    while(fgets)
     if((perm_pointer = popen(cmd, "r"))){
         if(fgets(risky_perm, 15, perm_pointer) != NULL){
             risky_perm[strcspn(risky_perm, "\r\n")] = '\0';
@@ -27,4 +26,12 @@ void suid(char* file){
     }
     pclose(perm_pointer);
     fclose(log);
+}
+
+void hidden_file(char *file){
+    if(fnmatch(".*", basename(file), 0)){
+        printf("FOUND A HIDDEN file\n");
+        printf("%s\n", file);
+        printf("LOW SEVERITY! It's not a guaranteed vulnerability, but it is unusual and warrants a manual review\n");
+    }
 }

@@ -186,7 +186,7 @@ void isoFunc(char *so_file){
         fclose(file);
         return;
     }
-    if((log = fopen("LogSofile.txt", "w")) == NULL){
+    if((log = fopen("LogSofile.txt", "a+")) == NULL){
         fprintf(stderr, "Unable to log *.so file\n");
         fclose(file);
         return;

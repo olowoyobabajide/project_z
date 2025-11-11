@@ -30,5 +30,4 @@
 #include "isofunc.h"
 #include "riskyfile.h"
 
-
 #endif

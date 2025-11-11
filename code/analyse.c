@@ -11,14 +11,37 @@ Over here we analyse the android manifest file for risky permissions and flags
 */
 #define keep 10000
 
-const char *permission[24] = {" ","android.permission.READ_SMS","android.permission.SEND_SMS","android.permission.RECEIVE_SMS",
-"android.permission.READ_CONTACTS","android.permission.WRITE_CONTACTS","android.permission.GET_ACCOUNTS",
-"android.permission.RECORD_AUDIO","android.permission.CAMERA","android.permission.READ_PHONE_STATE",
-"android.permission.CALL_PHONE","android.permission.READ_CALL_LOG","android.permission.WRITE_CALL_LOG",
-"android.permission.ACCESS_FINE_LOCATION","android.permission.ACCESS_COARSE_LOCATION","android.permission.READ_EXTERNAL_STORAGE",
-"android.permission.WRITE_EXTERNAL_STORAGE","android.permission.INTERNET","android.permission.SYSTEM_ALERT_WINDOW",
-"android.permission.BIND_ACCESSIBILITY_SERVICE","android.permission.REQUEST_INSTALL_PACKAGES",
-"android.permission.VIBRATE","android.permission.WAKE_LOCK","android.permission.RECEIVE_BOOT_COMPLETED"};
+typedef struct{
+    //This struct details about the permissions found
+    char *name;
+    char *level;
+}rperm;
+rperm rperms[] = {{"android.permission.READ_SMS","\nRisk Level: DANGEROUS\nReason: Allows reading of user's private SMS messages\n-------\n"},
+{"android.permission.SEND_SMS","\nRisk Level: DANGEROUS\nReason: Can send SMS without user consent (used for scams)\n-------\n"},
+{"android.permission.RECEIVE_SMS","\nRisk Level: DANGEROUS\nReason: Can intercept incoming SMS (used for OTP theft)\n-------\n"},
+{"android.permission.READ_CONTACTS","\nRisk Level: DANGEROUS\nReason: Gives access to user's contact list and social graph\n-------\n"},
+{"android.permission.WRITE_CONTACTS","\nRisk Level: DANGEROUS\nReason: Can modify or delete contact entries\n-------\n"},
+{"android.permission.GET_ACCOUNTS","\nRisk Level: MODERATE\nReason: Can access account credentials and sync info\n-------\n"},
+{"android.permission.RECORD_AUDIO","\nRisk Level: DANGEROUS\nReason: Allows eavesdropping through microphone\n-------\n"},
+{"android.permission.CAMERA","\nRisk Level: DANGEROUS\nReason: Can take photos/videos without user's knowledge\n-------\n"},
+{"android.permission.READ_PHONE_STATE","\nRisk Level: MODERATE\nReason: Access to phone number IMEI, call status\n-------\n"},
+{"android.permission.CALL_PHONE","\nRisk Level: DANGEROUS\nReason: Allows calling numbers directly (can be used in scams)\n-------\n"},
+{"android.permission.READ_CALL_LOG","\nRisk Level: DANGEROUS\nReason: Can access user's call history and logs\n-------\n"},
+{"android.permission.WRITE_CALL_LOG","\nRisk Level: DANGEROUS\nReason:Can modify call log data\n-------\n"},
+{"android.permission.ACCESS_FINE_LOCATION","\nRisk Level: DANGEROUS\nReason: Can track user's precise location\n-------\n"},
+{"android.permission.ACCESS_COARSE_LOCATION","\nRisk Level: MODERATE\nReason: Can track user's approximate location\n-------\n"},
+{"android.permission.READ_EXTERNAL_STORAGE","\nRisk Level: DANGEROUS\nReason: Can read all user files (photos, docs, etc.)\n-------\n"},
+{"android.permission.WRITE_EXTERNAL_STORAGE","\nRisk Level: DANGEROUS\nReason: Can modify or delete files on external storage\n-------\n"},
+{"android.permission.INTERNET","\nRisk Level:MODERATE\nReason: Allows network access; dangerous when combined with data permissions\n-------\n"},
+{"android.permission.SYSTEM_ALERT_WINDOW","\nRisk Level: DANGEROUS\nReason: Can draw overlays (used in phishing/overlay attacks)\n-------\n"},
+{"android.permission.BIND_ACCESSIBILITY_SERVICE","\nRisk Level: DANGEROUS\nReason: Can control device input/output — extremely powerful\n-------\n"},
+{"android.permission.REQUEST_INSTALL_PACKAGES","\nRisk Level: MODERATE\nReason: Can install new apps from unknown sources\n-------\n"},
+{"android.permission.VIBRATE","\nRisk Level: LOW\nReason: Used to trigger vibrations; no access to sensitive data\n-------\n"},
+{"android.permission.WAKE_LOCK","\nRisk Level: LOW,Keeps screen awake; minor battery risk, no data access\n-------\n"},
+{"android.permission.RECEIVE_BOOT_COMPLETED","\nRisk Level: MODERATE\nReason: Starts app after boot; can be used for stealthy persistence\n-------\n"}
+    };
+
+size_t NUM_PERMISSIONS = sizeof(rperms)/sizeof(rperm);
 void parsetag(xmlDocPtr doc, xmlNodePtr cur);
 void parsedoc(char *xmlfile, char *root, char *node, void(*xmlfunc)(xmlDocPtr, xmlNodePtr));
 
@@ -27,11 +50,7 @@ typedef struct tag{
     char *tag;
     char *f_tag;
 }tag;
-typedef struct reason_perms{
-    //This struct details about the permissions found
-    char *name;
-    char *level;
-}rperm;
+
 
 
 void parsetag(xmlDocPtr doc, xmlNodePtr cur)
@@ -39,13 +58,14 @@ void parsetag(xmlDocPtr doc, xmlNodePtr cur)
 
     // Array of tags to process and their corresponding output files
     tag tags[] = {
+        {"uses-permission", "permission.xml"},
         {"activity", "activity.xml"},
         {"service", "services.xml"},
         {"receiver", "receiver.xml"},
         {"provider", "providers.xml"}
     };
     
-    int num_tags = sizeof(tags) / sizeof(tags[0]);
+    size_t num_tags = sizeof(tags) / sizeof(tag);
     FILE *files[num_tags];
     xmlOutputBufferPtr outputs[num_tags];
     xmlNodePtr initial_cur = cur; // Save the starting node
@@ -82,7 +102,7 @@ void parsetag(xmlDocPtr doc, xmlNodePtr cur)
             // Check if the current node name matches one of our target tags.
             if ((!xmlStrcmp(cur->name, (const xmlChar *)tags[i].tag))) {
                 // If there's a match, dump the node to the corresponding output buffer.
-                if(outputs[i]) {
+                if(outputs[i]){
                     xmlNodeDumpOutput(outputs[i], doc, cur, 0, 1, "UTF-8");
                 }
                 // A node can only match one tag type, so we can break the inner loop.
@@ -129,15 +149,21 @@ void parsedoc(char *xmlfile, char *root, char *node, void(*xmlfunc)(xmlDocPtr, x
     }
     if (!xmlStrcmp(cur->name, (const xmlChar *)root))
     {
-        xmlNodePtr child = cur->xmlChildrenNode;
-        while(child != NULL)
-        {
-            if((!xmlStrcmp(child->name, (const xmlChar *)node)))
-            {
-                xmlfunc(doc, child);
-            }
-            child = child->next;
+        if (!xmlStrcmp((const xmlChar *)root, (const xmlChar *)node)) {
+            xmlfunc(doc, cur);
         }
+        else{
+            xmlNodePtr child = cur->xmlChildrenNode;
+            while(child != NULL)
+            {
+                if((!xmlStrcmp(child->name, (const xmlChar *)node)))
+                {
+                    xmlfunc(doc, child);
+                }
+                child = child->next;
+            }
+        }
+        
     }
     xmlFreeDoc(doc);
 }
@@ -438,22 +464,42 @@ void parseProvider(xmlDocPtr, xmlNodePtr cur)
     fclose(log);
 }
 
+void parsePermission(xmlDocPtr, xmlNodePtr cur){
+        FILE *log;
+        if ((log = fopen("manifestLog.txt", "a+")) == NULL)
+        {
+            perror("No log file");
+        }
+        if(!xmlStrcmp(cur->name, (const xmlChar*)"uses-permission")){
+            xmlChar* permission = xmlGetProp(cur, (const xmlChar*)"name");
+            if(permission != NULL){
+                for(int i = 0; i < NUM_PERMISSIONS; i++){
+                    if(strstr(rperms[i].name, permission)){
+                        fprintf(log, "Permission: %s\n%s", permission, rperms[i].level);
+                    }
+                }
+            }
+            if(permission) xmlFree(permission);
+        }
+}
+
 int analyse_per(char *file)
 {
     char perm[PATH_MAX];
-    bool inside_intent = false;
-    bool inside_tag = false;
-    FILE *AndroidManifest, *file_point[2];
+    FILE *AndroidManifest;
 
      
     if ((AndroidManifest = fopen(file, "r")) == NULL)
     {
-        perror("The AndroidManifest does not exist\n");
+        perror("AndroidManifest.xml");
         return EXIT_FAILURE;
     }
 
     printf("before parsetag call\n");
+    // parsedoc(file, "manifest", "manifest", parsetag); 
     parsedoc(file, "manifest", "application", parsetag);
+    printf("Calling parsepermission\n");
+    parsedoc("permission.xml", "root", "uses-permission",  parsePermission);
     printf("Calling parseactivity\n");
     parsedoc("activity.xml", "root", "activity",  parseActivity);
     printf("Calling parseservice\n");
@@ -461,24 +507,13 @@ int analyse_per(char *file)
     printf("Calling parsereceiver\n");
     parsedoc("receiver.xml", "root", "receiver", parseReceiver);
     printf("Calling parseprovider\n");
-    parsedoc("providers.xml", "root", "receiver", parseProvider);
+    parsedoc("providers.xml", "root", "provider", parseProvider);
 
-    
-    tag tags[] = {{"uses-permission", "permission.txt"}, {"application", "app.txt"}};
-   
-    while(fgets(perm, PATH_MAX-1, AndroidManifest))
-    {
-        for (int i = 0; i < 2; i++)
-            if (strstr(perm, tags[i].tag) && (file_point[i] = fopen(tags[i].f_tag, "a+")) != NULL)
-            {
-                fprintf(file_point[i], "%s", perm);
-            }
-    }
     fclose(AndroidManifest);
     return 0;
 }
 
-void tag_perm(char *a)
+/* void tag_perm(char *a)
 {
     
     FILE *file;
@@ -517,15 +552,11 @@ void tag_perm(char *a)
 {"android.permission.WAKE_LOCK","\nRisk Level: LOW,Keeps screen awake; minor battery risk, no data access\n-------\n"},
 {"android.permission.RECEIVE_BOOT_COMPLETED","\nRisk Level: MODERATE\nReason: Starts app after boot; can be used for stealthy persistence\n-------\n"}
     };
-    if ((log = fopen("log.txt", "w")) == NULL)
-    {
-        perror("No log file");
-    }
     //if ((strcmp(a, "permission.txt")) == 0) to be used in a different file
     while(fgets(perm, PATH_MAX-1, file))//reads the file line by line
     {
         
-        ptr = strstr(perm, "android:name=\"");//returns a pointer to the character after android.nam...
+        ptr = strstr(perm, "android:name=\""); // returns a pointer to the character after android.nam...
         ptr += 14;
         char *end;
         if (end = strchr(ptr, '"'))
@@ -533,7 +564,6 @@ void tag_perm(char *a)
             
             //splits it off at the end 
             *end = '\0';
-            //printf("%s", ptr);
             for (int i = 1; i < 24; i++)
             {
                 if (strcmp(permission[i], ptr)== 0)
@@ -558,4 +588,4 @@ void tag_perm(char *a)
     fclose(log);
     fclose(file);
 
-}
+}*/

@@ -43,4 +43,3 @@ static int nfile(const char *path, const struct stat *sb, int typeflag, struct F
     }
     return 0; 
 }
-

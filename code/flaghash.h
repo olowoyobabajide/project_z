@@ -1,6 +1,6 @@
 #ifndef FLAGHASH_H
 #define FLAGHASH_H
 
-void hash_sum(char *so_file);
+void verifyHash(char *file);
 
 #endif // FLAGHASH_H

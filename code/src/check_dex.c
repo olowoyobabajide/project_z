@@ -17,7 +17,7 @@ int dexfile(const char *path, const struct stat *sb, int typeflag, struct FTW *f
     if(typeflag == FTW_F)
     {
         char base_path[PATH_MAX];
-        snprintf(base_path, PATH_MAX-1, "%s/temp", path);
+        snprintf(base_path, PATH_MAX-1, "%s", path);
     
         if (fnmatch("*.dex", basename(base_path), 0) == 0)
         {
@@ -34,4 +34,3 @@ int dexfile(const char *path, const struct stat *sb, int typeflag, struct FTW *f
     }
     return 0; 
 }
-
