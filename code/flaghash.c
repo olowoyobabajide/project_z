@@ -1,7 +1,7 @@
 #include "main.h"
 #include <openssl/evp.h>
-// #include <openssl/md5.h>
-// #include <openssl/sha.h>
+#include <openssl/md5.h>
+#include <openssl/sha.h>
 
 typedef struct {
     char **hash;
@@ -70,86 +70,83 @@ void verifyHash(char *file){
     fseek(doc, 0, SEEK_END);
     FILE_SIZE = ftell(doc);
 
-    printf("File size: %d\n", FILE_SIZE);
-
-    char file_content[FILE_SIZE];
-
-    fseek(doc, 0, SEEK_SET);
+    char *file_content = malloc(FILE_SIZE);
+    rewind(doc);
     fread(file_content, FILE_SIZE, 1, doc);
 
-    unsigned char *md5_hash;
-    unsigned char *sha1_hash;
-    unsigned char *sha256_hash;
+    unsigned char md5_hash[MD5_DIGEST_LENGTH];
+    unsigned char sha1_hash[SHA_DIGEST_LENGTH];
+    unsigned char sha256_hash[SHA256_DIGEST_LENGTH];
 
-    unsigned int digest_length;
+    unsigned int digest_length = 0;;
     EVP_MD_CTX *hash_ctx;
+    EVP_MD_CTX *sha1_ctx;
+    EVP_MD_CTX *sha256_ctx;
 
-    if((hash_ctx = EVP_MD_CTX_new()) == NULL){perror("Error allocating size for hash");}
-    if(1 != EVP_DigestInit_ex(hash_ctx, EVP_md5(), NULL)){perror("Error allocating size for hash");}
-    if(1 != EVP_DigestUpdate(hash_ctx, file_content, FILE_SIZE)){perror("Error allocating size for hash");}
-    // if((*md5_hash = (unsigned char *)OPENSSL_malloc(EVP_MD_size(EVP_md5()))) == NULL){
-    //     {perror("Error allocating size for hash");}
-    // }
-    if(1 != EVP_DigestFinal_ex(hash_ctx, md5_hash, &digest_length)){perror("Error allocating size for hash");}
-    //printf("%s\n", *md5_hash);
-    //printf("SHA256 Hash of \"%s\": ", file_conte);
+    // md5 hashing
+    if((hash_ctx = EVP_MD_CTX_new()) == NULL){perror("md5:EVP_MD_CTX_new");}
+    if(1 != EVP_DigestInit_ex(hash_ctx, EVP_md5(), NULL)){perror("md5:EVP_DigestInit_ex");}
+    if(1 != EVP_DigestUpdate(hash_ctx, file_content, FILE_SIZE)){perror("md5:EVP_DigestUpdate");}
+    if(1 != EVP_DigestFinal_ex(hash_ctx, md5_hash, &digest_length)){perror("md5:EVP_DigestFinal_ex");}
+
+    char md5_string[33];
     for (unsigned int i = 0; i < digest_length; i++) {
-        printf("%02x", md5_hash[i]);
+        //printf("%02x", md5_hash[i]);
+        sprintf(&md5_string[i*2], "%02x", md5_hash[i]);
     }
-    printf("\n");
+    md5_string[32] = '\0';
 
-    /*MD5((unsigned char*)file_content, FILE_SIZE, md5_hash);
-    /*SHA1((unsigned char*)file_content, FILE_SIZE, sha1_hash);
-    SHA256((unsigned char*)file_content, FILE_SIZE, sha256_hash);
-
-
-    for(int md5_count = 0; md5_count < NUM_threatMD5; md5_count++){
-        if(strstr(md5_hash, threatmd5.hash[md5_count])){
+    for(uint32_t md5_count = 0; md5_count < NUM_threatMD5; md5_count++){
+        if(strstr(md5_string, threatmd5.hash[md5_count])){
             printf("%s\n", md5_hash);
-            printf("VULNERABILTY FOUND! md5hash \n");
+            printf("VULNERABILTY FOUND! md5hash\n");
         }
     }
+
+    // sha1 hashing
+    if((sha1_ctx = EVP_MD_CTX_new()) == NULL){perror("sha1:EVP_MD_CTX_new");}
+    if(1 != EVP_DigestInit_ex(sha1_ctx, EVP_sha1(), NULL)){perror("sha1:EVP_DigestInit_ex");}
+    if(1 != EVP_DigestUpdate(sha1_ctx, file_content, FILE_SIZE)){perror("sha1:EVP_DigestUpdate");}
+    if(1 != EVP_DigestFinal_ex(sha1_ctx, sha1_hash, &digest_length)){perror("sha1:EVP_DigestFinal_ex");}
+    
+    char sha1_string[41];
+    for (unsigned int i = 0; i < digest_length; i++) {
+        //printf("%02x", sha1_hash[i]);
+        sprintf(&sha1_string[i*2], "%02x", sha1_hash[i]);
+    }
+    sha1_string[40] = '\0';
+
     for(int sha_count = 0; sha_count < NUM_threatSHA1; sha_count++){
-        if(strstr(sha1_hash, threatsha1.hash[sha_count])){
+        if(strcmp(sha1_string, threatsha1.hash[sha_count]) == 0){
             printf("%s\n", sha1_hash);
             printf("VULNERABILTY FOUND! sha1hash\n");
         }
     }
+
+    // sha256 hashing
+    if((sha256_ctx = EVP_MD_CTX_new()) == NULL){perror("sha256:EVP_MD_CTX_new");}
+    if(1 != EVP_DigestInit_ex(sha256_ctx, EVP_sha256(), NULL)){perror("sha256:EVP_DigestInit_ex");}
+    if(1 != EVP_DigestUpdate(sha256_ctx, file_content, FILE_SIZE)){perror("sha256:EVP_DigestUpdate");}
+    if(1 != EVP_DigestFinal_ex(sha256_ctx, sha256_hash, &digest_length)){perror("sha256:EVP_DigestFinal_ex");}
+
+    char sha256_string[41];
+    for (unsigned int i = 0; i < digest_length; i++) {
+        //printf("%02x", sha1_hash[i]);
+        sprintf(&sha1_string[i*2], "%02x", sha1_hash[i]);
+    }
+    sha256_string[40] = '\0';
     for(int sha_count = 0; sha_count < NUM_threatSHA256; sha_count++){
-        if(strstr(sha256_hash, threatsha256.hash[sha_count])){
+        if(strcmp(sha256_hash, threatsha256.hash[sha_count]) == 0){
             printf("%s\n", sha256_hash);
             printf("VULNERABILTY FOUND! sha1hash\n");
         }
-    }*/
+    }
 
-
-    // char temp[65];
-    // if((p_hash = popen(md5sum, "r"))){
-    //     if(fgets(temp, 65, p_hash)){
-    //         strtok(temp, " ");
-    //         for(int i = 0; i < NUM_MD5; i++){
-    //             if(strcmp(temp, md5hash.hash[i]) == 0){
-    //                 printf("%s\n", temp);
-    //                 printf("VULNERABILTY FOUND! md5hash \n");
-                    
-    //             }
-    //         }
-    //         for(int i = 0; i < NUM_SHA1; i++){
-    //             if(strcmp(temp, sha1hash.hash[i]) == 0){
-    //                 printf("%s ", temp);
-    //                 printf("VULNERABILTY FOUND! sha1hash\n");
-    //             }
-    //         }
-    //         for(int i = 0; i < NUM_SHA256; i++){
-    //             if(strcmp(temp, sha256hash.hash[i]) == 0){
-    //                 printf("%s ", temp);
-    //                 printf("VULNERABILTY FOUND! sha256hash \n");
-    //             }
-    //         }
-            
-    //     }
-    // }
-    // pclose(p_hash);
+    free(file_content);
     EVP_MD_CTX_free(hash_ctx);
-    //fclose(doc);
+    EVP_MD_CTX_free(sha1_ctx);
+    EVP_MD_CTX_free(sha256_ctx);
+    
+    fclose(doc);
 }
+

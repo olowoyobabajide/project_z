@@ -15,7 +15,8 @@
 		"files.associations": {
 			"typeinfo": "c",
 			"text_encoding": "c",
-			"string.h": "c"
+			"string.h": "c",
+			"cstdint": "c"
 		},
 		"geminicodeassist.agentDebugMode": true
 	}

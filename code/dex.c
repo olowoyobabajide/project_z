@@ -708,33 +708,33 @@ int logdex(char *dex){
 
 void freeKeepMemory(keepMemory mem){
     if (mem.strings) {
-        for(uint32_t i = 0; i < mem.strings_count; i++){
-            //free(mem.strings[i]);
-        }
+        // for(uint32_t i = 0; i < mem.strings_count; i++){
+        //     //free(mem.strings[i]);
+        // }
         free(mem.strings);
     }
     if (mem.method_definitions) {
-        for(uint32_t i = 0; i < mem.method_definitions_count; i++){
-            //free(mem.method_definitions[i]);
-        }
+        // for(uint32_t i = 0; i < mem.method_definitions_count; i++){
+        //     //free(mem.method_definitions[i]);
+        // }
         free(mem.method_definitions);
     }
     if (mem.method_class) {
-        for(uint32_t i = 0; i < mem.method_class_count; i++){
-            //free(mem.method_class[i]);
-        }
+        // for(uint32_t i = 0; i < mem.method_class_count; i++){
+        //     //free(mem.method_class[i]);
+        // }
         free(mem.method_class);
     }
     if (mem.class_definitions) {
-        for(uint32_t i = 0; i < mem.class_definitions_count; i++){
-            //free(mem.class_definitions[i]);
-        }
+        // for(uint32_t i = 0; i < mem.class_definitions_count; i++){
+        //     //free(mem.class_definitions[i]);
+        // }
         free(mem.class_definitions);
     }
     if (mem.super_idx) {
-        for(uint32_t i = 0; i < mem.super_idx_count; i++){
-            //free(mem.super_idx[i]);
-        }
+        // for(uint32_t i = 0; i < mem.super_idx_count; i++){
+        //     //free(mem.super_idx[i]);
+        // }
         free(mem.super_idx);
     }
     

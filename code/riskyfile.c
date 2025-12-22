@@ -10,7 +10,7 @@ void suid(char* file){
     char cmd[256];
 
     snprintf(cmd, 255, "stat --printf=%%A \"%s\"",file);
-
+    printf("stat %s\n", file);
     if((perm_pointer = popen(cmd, "r"))){
         if(fgets(risky_perm, 15, perm_pointer) != NULL){
             risky_perm[strcspn(risky_perm, "\r\n")] = '\0';

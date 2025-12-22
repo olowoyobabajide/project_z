@@ -68,7 +68,6 @@ void parsetag(xmlDocPtr doc, xmlNodePtr cur)
     size_t num_tags = sizeof(tags) / sizeof(tag);
     FILE *files[num_tags];
     xmlOutputBufferPtr outputs[num_tags];
-    xmlNodePtr initial_cur = cur; // Save the starting node
     cur = cur->children;
     //Open all files in write mode to clear them and prepare for writing.
     for (int i = 0; i < num_tags; i++) {
@@ -95,7 +94,6 @@ void parsetag(xmlDocPtr doc, xmlNodePtr cur)
                 "<root xmlns:android=\"http://schemas.android.com/apk/res/android\">\n");
         }
     }
-
     //Iterate through all sibling nodes.
     while (cur != NULL) {
         for (int i = 0; i < num_tags; i++) {
@@ -105,7 +103,7 @@ void parsetag(xmlDocPtr doc, xmlNodePtr cur)
                 if(outputs[i]){
                     xmlNodeDumpOutput(outputs[i], doc, cur, 0, 1, "UTF-8");
                 }
-                // A node can only match one tag type, so we can break the inner loop.
+                // A node can only match one tag type, so break the inner loop.
                 break;
             }
         }
@@ -116,7 +114,7 @@ void parsetag(xmlDocPtr doc, xmlNodePtr cur)
     for (int i = 0; i < num_tags; i++) {
         if (outputs[i]) {
             xmlOutputBufferWriteString(outputs[i], "\n</root>\n");
-            xmlOutputBufferClose(outputs[i]); // This also flushes the buffer.
+            xmlOutputBufferClose(outputs[i]); // flushes the buffer.
         }
         if (files[i]) {
             fclose(files[i]);
@@ -474,8 +472,8 @@ void parsePermission(xmlDocPtr, xmlNodePtr cur){
             xmlChar* permission = xmlGetProp(cur, (const xmlChar*)"name");
             if(permission != NULL){
                 for(int i = 0; i < NUM_PERMISSIONS; i++){
-                    if(strstr(rperms[i].name, permission)){
-                        fprintf(log, "Permission: %s\n%s", permission, rperms[i].level);
+                    if(strcmp(rperms[i].name, permission) == 0){
+                        fprintf(log, "Permission: %s%s", permission, rperms[i].level);
                     }
                 }
             }
@@ -496,7 +494,7 @@ int analyse_per(char *file)
     }
 
     printf("before parsetag call\n");
-    // parsedoc(file, "manifest", "manifest", parsetag); 
+    //parsedoc(file, "manifest", "manifest", parsetag); 
     parsedoc(file, "manifest", "application", parsetag);
     printf("Calling parsepermission\n");
     parsedoc("permission.xml", "root", "uses-permission",  parsePermission);

@@ -30,4 +30,11 @@
 #include "isofunc.h"
 #include "riskyfile.h"
 
+
+#define RESET   "\033[0m"
+#define BOLD_RED    "\033[1;31m" // CRITICAL / HIGH
+#define YELLOW  "\033[0;33m" // MEDIUM / WARNING
+#define BLUE    "\033[0;34m" // LOW
+#define GREEN   "\033[0;32m" // INFO / OK
+
 #endif
