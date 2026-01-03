@@ -42,7 +42,7 @@ int logdex(char *);
 
 void freeKeepMemory(keepMemory mem);
 
-int dexScan(char *dex)
+int dexScan(char *dex, Report *report)
 {
 
     logdex(dex);
@@ -53,7 +53,9 @@ int dexScan(char *dex)
         dataInMemory.class_definitions, dataInMemory.class_definitions_count,
         dataInMemory.method_definitions, dataInMemory.method_definitions_count,
         dataInMemory.method_class, dataInMemory.method_class_count,
-        dataInMemory.super_idx, dataInMemory.super_idx_count
+        dataInMemory.super_idx, dataInMemory.super_idx_count,
+        report,
+        dex
     );
     printf("main: after analyseDex\n"); fflush(stdout);
     freeKeepMemory(dataInMemory);
@@ -554,6 +556,32 @@ void classDefTable(char *dex, FILE*dexLog,uint32_t *class_index, char **string_d
 //     uint32_t code_off;
 // }*method;
 
+// Helper to process a single code item
+void process_code_item(FILE *file, FILE *dexLog, uint32_t code_off, uint32_t method_idx) {
+    if (code_off == 0) return;
+    
+    long current_pos = ftell(file);
+    fseek(file, code_off, SEEK_SET);
+
+    uint16_t registers_size, ins_size, outs_size, tries_size;
+    uint32_t debug_info_off, insns_size;
+
+    fread(&registers_size, sizeof(uint16_t), 1, file);
+    fread(&ins_size, sizeof(uint16_t), 1, file);
+    fread(&outs_size, sizeof(uint16_t), 1, file);
+    fread(&tries_size, sizeof(uint16_t), 1, file);
+    fread(&debug_info_off, sizeof(uint32_t), 1, file);
+    fread(&insns_size, sizeof(uint32_t), 1, file);
+
+    // fprintf(dexLog, "[CODE] MethodIdx=%u, Regs=%u, Ins=%u, Outs=%u, InsnsSize=%u\n", 
+    //        method_idx, registers_size, ins_size, outs_size, insns_size);
+    
+    // Here you could read the bytecode if needed
+    // fseek(file, code_off + 16, SEEK_SET); // Instructions start after 16 byte header
+
+    fseek(file, current_pos, SEEK_SET); // Restore position
+}
+
 void class_data_item(char *dex, FILE*dexLog, uint32_t *class_data_off, uint32_t class_defs_size){
     FILE *file;
 
@@ -562,127 +590,61 @@ void class_data_item(char *dex, FILE*dexLog, uint32_t *class_data_off, uint32_t 
         fclose(dexLog);
         return;
     }
-    uint32_t *static_fields_size = NULL;
-    uint32_t *instance_fields_size = NULL;
-    uint32_t *direct_methods_size = NULL;
-    uint32_t *virtual_methods_size = NULL;
-
-    static_fields_size = malloc(sizeof(uint32_t)*class_defs_size);
-    instance_fields_size = malloc(sizeof(uint32_t)*class_defs_size);
-    direct_methods_size = malloc(sizeof(uint32_t)*class_defs_size);
-    virtual_methods_size = malloc(sizeof(uint32_t)*class_defs_size);
-    if (!static_fields_size || !instance_fields_size || !direct_methods_size || !virtual_methods_size) {
-        perror("Error allocating memory for class data sizes\n");
-        goto cleanup; // Use goto for centralized cleanup
-    }
 
     for(uint32_t i = 0; i < class_defs_size; i++){
-        if (class_data_off[i] != 0) {
-            fseek(file, class_data_off[i], SEEK_SET);
+        if (class_data_off[i] == 0) continue;
 
-            static_fields_size[i] = readULEB128(file);
-            instance_fields_size[i] = readULEB128(file);
-            direct_methods_size[i] = readULEB128(file);
-            virtual_methods_size[i] = readULEB128(file);
-        } else {
-            // No class data for this item, set sizes to 0
-            static_fields_size[i] = 0;
-            instance_fields_size[i] = 0;
-            direct_methods_size[i] = 0;
-            virtual_methods_size[i] = 0;
+        fseek(file, class_data_off[i], SEEK_SET);
+
+        uint32_t static_fields_size = readULEB128(file);
+        uint32_t instance_fields_size = readULEB128(file);
+        uint32_t direct_methods_size = readULEB128(file);
+        uint32_t virtual_methods_size = readULEB128(file);
+
+        // Skip fields
+        for (uint32_t j = 0; j < static_fields_size; j++) {
+            readULEB128(file); // field_idx_diff
+            readULEB128(file); // access_flags
+        }
+        for (uint32_t j = 0; j < instance_fields_size; j++) {
+            readULEB128(file); // field_idx_diff
+            readULEB128(file); // access_flags
+        }
+
+        // Process Direct Methods
+        uint32_t method_idx = 0;
+        for (uint32_t j = 0; j < direct_methods_size; j++) {
+            uint32_t diff = readULEB128(file);
+            method_idx += diff;
+            uint32_t access_flags = readULEB128(file);
+            uint32_t code_off = readULEB128(file);
+            
+            if (code_off != 0) {
+                 process_code_item(file, dexLog, code_off, method_idx);
+            }
+        }
+
+        // Process Virtual Methods
+        method_idx = 0;
+        for (uint32_t j = 0; j < virtual_methods_size; j++) {
+            uint32_t diff = readULEB128(file);
+            method_idx += diff;
+            uint32_t access_flags = readULEB128(file);
+            uint32_t code_off = readULEB128(file);
+            
+            if (code_off != 0) {
+                 process_code_item(file, dexLog, code_off, method_idx);
+            }
         }
     }
-    for (uint32_t j = 0; j < class_defs_size; j++){
-        fprintf(dexLog, "[CLASS_DATA] static_fields=%u, instance_fields=%u, direct_methods=%u, virtual_methods=%u\n", static_fields_size[j], instance_fields_size[j], direct_methods_size[j], virtual_methods_size[j]);
-    }
-    method direct_method;
-    method virtual_method;
-    for(uint32_t a = 0; a < class_defs_size; a++){
-        fseek(file, class_data_off[a], SEEK_SET);
-        uint32_t num_direct = direct_methods_size[a];
-        uint32_t num_virtual = virtual_methods_size[a];
-
-        readULEB128(file); // Skip static_fields_size
-        readULEB128(file); // Skip instance_fields_size
-
-        direct_method = malloc(sizeof(struct resolvedMethod) * num_direct);
-        virtual_method = malloc(sizeof(struct resolvedMethod) * num_virtual);
-        for(uint32_t b = 0; b < num_direct; b++){
-            direct_method[b].methodIdx = readULEB128(file);
-            direct_method[b].accessFlags = readULEB128(file);
-            direct_method[b].code_off =readULEB128(file);
-            //printf("%d\n", direct_method[b].code_off);
-        }
-        for(uint32_t b = 0; b < num_virtual; b++){
-            virtual_method[b].methodIdx = readULEB128(file);
-            virtual_method[b].accessFlags = readULEB128(file);
-            virtual_method[b].code_off =readULEB128(file);
-        }
-    }
-    printf("Calling Code Item\n");
-    code_item(dex, dexLog, direct_method, virtual_method, class_defs_size);
-cleanup:
-    free(static_fields_size);
-    free(instance_fields_size);
-    //free(direct_methods_size);
-    //free(virtual_methods_size);
+    
     fclose(file);
 }
 
-void code_item(char *dex, FILE *dexLog, method direct , method virtual, uint32_t size){
-    FILE *file;
-
-    if((file = fopen(dex, "rb"))== NULL){
-        fprintf(stderr, "Unable to read *.dex file\n");
-        fclose(dexLog);
-        return;
-    }
-    uint16_t *registers_size, *ins_size, *outs_size;
-    uint32_t *debug_info_off, *insns_size;
-
-    registers_size = malloc(sizeof(uint16_t)*size);
-    ins_size = malloc(sizeof(uint16_t)*size);
-    outs_size = malloc(sizeof(uint16_t)*size);
-    debug_info_off = malloc(sizeof(uint32_t)*size);
-    insns_size = malloc(sizeof(uint32_t)*size);
-    uint16_t *code_bytes = malloc((sizeof(uint16_t) * 2) * size);
-    if(registers_size == NULL || ins_size == NULL || outs_size == NULL || debug_info_off == NULL || insns_size == NULL){
-        perror("Error allocating memory for class data sizes\n");
-        goto cleanup; // Centralized cleanup
-    }
-    if(code_bytes == NULL){
-        perror("Error allocating memory for insns size\n");
-        goto cleanup;
-    }
-    for(uint32_t i = 0; i < size; i++){
-        fseek(file, direct[i].code_off, SEEK_SET);
-        
-        fread(&registers_size[i], sizeof(uint16_t), 1, file);
-        fread(&ins_size[i], sizeof(uint16_t), 1, file);
-        fread(&outs_size[i], sizeof(uint16_t), 1, file);
-        fread(&debug_info_off[i], sizeof(uint32_t), 1, file);
-        fread(&insns_size[i], sizeof(uint32_t), 1, file);
-        
-        code_bytes[i] = insns_size[i];
-
-    }
-    dataInMemory.code_byte = malloc((sizeof(uint16_t) * 2) * size); 
-    dataInMemory.code_byte = code_bytes;
-    dataInMemory.code_byte_count = size;
-   /* for(uint32_t j = 0; j < size; j++){
-        
-        //fprintf(dexLog, "[CODE_ITEM] %d, %d, %d, %d, %d\n", registers_size[j], ins_size[j], outs_size[j], debug_info_off[j], insns_size[j]);
-
-    }*/
-
-    cleanup:
-        free(ins_size);
-        free(registers_size);
-        free(insns_size);
-        free(outs_size);
-        free(debug_info_off);
-        //free(direct);
-        //free(virtual);
+void code_item(char *dex, FILE *dexLog, method direct , method virtual, uint32_t size){ 
+    // Legacy function kept for signature compatibility if needed, 
+    // but functionality moved to process_code_item and class_data_item.
+    // The previous implementation was flawed (batch processing with incorrect sizes).
 }
 
 int logdex(char *dex){

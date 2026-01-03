@@ -16,10 +16,10 @@ void suid(char* file){
             risky_perm[strcspn(risky_perm, "\r\n")] = '\0';
 
             if(strchr(risky_perm, 's')){
-                fprintf(log, "VULNERABILTY FOUND! SUID permission '%s'\n – anyone who runs the file temporarily gains the owner's privileges\n", risky_perm);   
+                fprintf(log, "VULNERABILTY FOUND! SUID permission '%s'\n anyone who runs the file temporarily gains the owner's privileges\n", risky_perm);   
             }
             if(strstr(risky_perm, "rwxrwxrwx")){
-                fprintf(log, "VULNERABILTY FOUND! world writable vulnerability '%s'\n – anyone can modify the file\n", risky_perm); 
+                fprintf(log, "VULNERABILTY FOUND! world writable vulnerability '%s'\n anyone can modify the file\n", risky_perm); 
             }
         }
         

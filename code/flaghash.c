@@ -17,17 +17,21 @@ threatMD5 threatmd5;
 threatSHA1 threatsha1;
 threatSHA256 threatsha256;
 
-size_t NUM_threatMD5 = sizeof(threatmd5)/sizeof(threatMD5);
-size_t NUM_threatSHA1 = sizeof(threatsha1)/sizeof(threatSHA1);
-size_t NUM_threatSHA256 = sizeof(threatsha256)/sizeof(threatSHA256);
+// Global counters for actual number of loaded hashes
+size_t count_md5 = 0;
+size_t count_sha1 = 0;
+size_t count_sha256 = 0;
+int db_loaded = 0;
 
 void threat_hash(char *file);
 void threat_hash(char *file){
+    if (db_loaded) return; // Prevent re-loading and memory leaks
+
     FILE *threat_DB;
 
     if((threat_DB = fopen(file, "r")) == NULL){
-        perror("Unable to read threat Database");
-        fclose(threat_DB);
+        // perror("Unable to read threat Database"); // Optional: warn if missing
+        return;
     }
     // md5: 986
     // sha1: 905
@@ -35,26 +39,31 @@ void threat_hash(char *file){
     threatmd5.hash = malloc(sizeof(char*)*986);
     threatsha1.hash = malloc(sizeof(char*)*905);
     threatsha256.hash = malloc(sizeof(char*)*1174);
+    
     if (threatmd5.hash == NULL || threatsha1.hash == NULL || threatsha256.hash == NULL) {
-    perror("Failed to allocate memory for hash pointers");}
+        perror("Failed to allocate memory for hash pointers");
+        fclose(threat_DB);
+        return;
+    }
+
     char s[100];
-    int i = 0, j = 0, k = 0;
+    // i, j, k already correspond to our global counters
+    count_md5 = 0; count_sha1 = 0; count_sha256 = 0;
+
     while(fgets(s, sizeof s, threat_DB) != NULL){
         s[strcspn(s, "\r\n")] = '\0';
         if(strlen(s) == 32){
-            threatmd5.hash[i] = strdup(s);
-            i++;
+            if (count_md5 < 986) threatmd5.hash[count_md5++] = strdup(s);
         }
         if(strlen(s) == 40){
-            threatsha1.hash[j] = strdup(s);
-            j++;
+            if (count_sha1 < 905) threatsha1.hash[count_sha1++] = strdup(s);
         }
         if(strlen(s) == 64){
-            threatsha256.hash[k] = strdup(s);
-            k++;
+            if (count_sha256 < 1174) threatsha256.hash[count_sha256++] = strdup(s);
         }
     }
     fclose(threat_DB);
+    db_loaded = 1;
 }
 
 void verifyHash(char *file){
@@ -96,9 +105,9 @@ void verifyHash(char *file){
     }
     md5_string[32] = '\0';
 
-    for(uint32_t md5_count = 0; md5_count < NUM_threatMD5; md5_count++){
-        if(strstr(md5_string, threatmd5.hash[md5_count])){
-            printf("%s\n", md5_hash);
+    for(uint32_t md5_count = 0; md5_count < count_md5; md5_count++){
+        if(strcmp(md5_string, threatmd5.hash[md5_count]) == 0){
+            printf("%s\n", md5_string);
             printf("VULNERABILTY FOUND! md5hash\n");
         }
     }
@@ -116,9 +125,9 @@ void verifyHash(char *file){
     }
     sha1_string[40] = '\0';
 
-    for(int sha_count = 0; sha_count < NUM_threatSHA1; sha_count++){
+    for(int sha_count = 0; sha_count < count_sha1; sha_count++){
         if(strcmp(sha1_string, threatsha1.hash[sha_count]) == 0){
-            printf("%s\n", sha1_hash);
+            printf("%s\n", sha1_string);
             printf("VULNERABILTY FOUND! sha1hash\n");
         }
     }
@@ -129,16 +138,15 @@ void verifyHash(char *file){
     if(1 != EVP_DigestUpdate(sha256_ctx, file_content, FILE_SIZE)){perror("sha256:EVP_DigestUpdate");}
     if(1 != EVP_DigestFinal_ex(sha256_ctx, sha256_hash, &digest_length)){perror("sha256:EVP_DigestFinal_ex");}
 
-    char sha256_string[41];
+    char sha256_string[65]; // Fixed size
     for (unsigned int i = 0; i < digest_length; i++) {
-        //printf("%02x", sha1_hash[i]);
-        sprintf(&sha1_string[i*2], "%02x", sha1_hash[i]);
+        sprintf(&sha256_string[i*2], "%02x", sha256_hash[i]); // Fixed source array
     }
-    sha256_string[40] = '\0';
-    for(int sha_count = 0; sha_count < NUM_threatSHA256; sha_count++){
-        if(strcmp(sha256_hash, threatsha256.hash[sha_count]) == 0){
-            printf("%s\n", sha256_hash);
-            printf("VULNERABILTY FOUND! sha1hash\n");
+    sha256_string[64] = '\0';
+    for(int sha_count = 0; sha_count < count_sha256; sha_count++){
+        if(strcmp(sha256_string, threatsha256.hash[sha_count]) == 0){ // Fixed compare string
+            printf("%s\n", sha256_string);
+            printf("VULNERABILTY FOUND! sha256hash\n");
         }
     }
 

@@ -3,13 +3,17 @@
 
 int dexfile(const char *path, const struct stat *sb, int typeflag, struct FTW *ftbuf);
 
-int filecheckDex(char *file_path)
+static Report *current_report = NULL;
+
+int filecheckDex(char *file_path, Report *r)
 {
+    current_report = r; // Set static variable for nftw callback
     if (nftw(file_path, dexfile, 5, FTW_PHYS) == -1)
     {
         perror("nftw");
         return EXIT_FAILURE;
     }
+    current_report = NULL; // Cleanup
 }
 int dexfile(const char *path, const struct stat *sb, int typeflag, struct FTW *ftbuf)
 {
@@ -23,7 +27,7 @@ int dexfile(const char *path, const struct stat *sb, int typeflag, struct FTW *f
         {
             if (sb->st_mode & 0740)// check this with the access function instead
             {
-               dexScan(base_path);
+               dexScan(base_path, current_report);
             }
             else
             {

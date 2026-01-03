@@ -113,16 +113,7 @@ SecurityRuleInfo rule_info_database[] = {
     { .category = NULL, .description = NULL }
 };
 
-void analyseDex(
-    char **str, int str_count,
-    char **typ, int typ_count,
-    char **class, int class_count,
-    char **method, int method_count,
-    char **meth_class, int meth_class_count,
-    char **super_class, int super_class_count
-    /*uint16_t *code_byte,
-    uint32_t code_byte_count*/
-);
+
 
 void analyseDex(
     char **str, int str_count,
@@ -130,110 +121,177 @@ void analyseDex(
     char **class, int class_count,
     char **method, int method_count,
     char **meth_class, int meth_class_count,
-    char **super_class, int super_class_count
+    char **super_class, int super_class_count,
+    Report *report,
+    const char *filename
     /*uint16_t *code_byte,
     uint32_t code_byte_count*/
 ){
 
     FILE *log;
-
-    if((log = fopen("dex_analysis.txt", "w")) == NULL){
-        fprintf(stderr, "Could not analyse file\n");
+    if((log = fopen("dex_analysis.txt", "a")) == NULL){
+        fprintf(stderr, "Could not open dex_analysis.txt\n");
         return;
     }
-    printf("[Starting Rule Engine...]\n");
-    printf("%s, %s\n", __TIME__,__DATE__);
     
+    // Evidence strings (NULL means not found)
+    char *evidence_accessibility = NULL;
+    char *evidence_broadcast_boot = NULL;
+    char *evidence_notification_listener = NULL;
+    char *evidence_dex_loader = NULL;
+    char *evidence_crypto_file = NULL; // Combination
+    char *evidence_camera_mic_socket = NULL; // Combination
+    char *evidence_reflection_exec = NULL; // Combination
+    char *evidence_emulator_check = NULL;
+    char *evidence_runtime_exec = NULL;
+    char *evidence_usage_stats = NULL;
+    char *evidence_clipboard = NULL;
+    char *evidence_log_secrets = NULL; // Combination
+    char *evidence_js_interface = NULL;
+    char *evidence_sms_manager = NULL;
+    char *evidence_root = NULL;
+
+    // Helper evidence
+    char *ev_broadcast_receiver = NULL;
+    char *ev_boot_completed = NULL;
+    char *ev_sms_send = NULL;
+    char *ev_log_util = NULL;
+    char *ev_sensitive_string = NULL;
+    char *ev_http_socket = NULL;
+    char *ev_media_hardware = NULL;
+    char *ev_reflection = NULL;
+    char *ev_exec_cmd = NULL;
+    char *ev_cipher = NULL;
+    char *ev_file_io = NULL;
+    char *ev_window_manager = NULL;
+
+    // 1. Scan Super Classes
     for(uint32_t i = 0; i < super_class_count; i++){
-        if(strstr(super_class[i], "Landroid/accessibilityservice/AccessibilityService;")){
-            fprintf(log, "%s, %s\n", rule_info_database[0].category, rule_info_database[0].description);
-        }
-        else if(strstr(super_class[i], "Landroid/content/BroadcastReceiver;")){
-            for(uint32_t j = 0; j < str_count; j++){
-                if(strstr(str[j], "android.intent.action.BOOT_COMPLETED")){
-                    fprintf(log, "%s, %s\n", rule_info_database[1].category, rule_info_database[1].description);
-                }
-            }
-        }
-        else if(strstr(super_class[i], "Landroid/app/NotificationListenerService;")){
-            fprintf(log, "%s, %s\n", rule_info_database[2].category, rule_info_database[2].description);
-        }
-        else if(strstr(super_class[i], "Landroid/content/BroadcastReceiver;")){
-            for(uint32_t j = 0; j < str_count; j++){
-                if(strstr(str[j], "SmsManager") || strstr(str[j], "sendTextMessage")){
-                    fprintf(log, "%s %s\n", rule_info_database[14].category, rule_info_database[14].description);
-                }
-            }
-        }
+        if(!super_class[i]) continue;
+        if(strstr(super_class[i], "Landroid/accessibilityservice/AccessibilityService;")) evidence_accessibility = super_class[i];
+        if(strstr(super_class[i], "Landroid/content/BroadcastReceiver;")) ev_broadcast_receiver = super_class[i];
+        if(strstr(super_class[i], "Landroid/app/NotificationListenerService;")) evidence_notification_listener = super_class[i];
     }
+
+    // 2. Scan Strings
     for(uint32_t i = 0; i < str_count; i++){
-        if(strstr(str[i], "Ldalvik/system/DexClassLoader;") || strstr(str[i], "Ldalvik/system/PathClassLoader;")){
-            fprintf(log, "%s, %s\n", rule_info_database[3].category, rule_info_database[3].description);
-        }
-        if((strcasestr(str[i], "cipher") || strcasestr(str[i], "aes") || strcasestr(str[i], "encrypt")) && (strcasestr(str[i], "File") || strcasestr(str[i], "FileOutputStream")) && strcasestr(str[i], "WindowManager")){
-            fprintf(log, "%s, %s\n", rule_info_database[4].category, rule_info_database[4].description);
-        }
-        if(strcasestr(str[i], "ro.debuggable") || strcasestr(str[i], "generic_x86") || strcasestr(str[i], "sdk_google") || strcasestr(str[i], "com.android.emulator") || strcasestr(str[i], "qemu") || strcasestr(str[i], "vbox") || strcasestr(str[i], "bluestacks")){
-            fprintf(log, "%s, %s\n", rule_info_database[7].category, rule_info_database[7].description);
-        }
-        if(strstr(str[i], "Landroid/app/usage/UsageStatsManager;")){
-            fprintf(log, "%s, %s\n", rule_info_database[10].category, rule_info_database[10].description);
-        }
-        if(strstr(str[i], "Landroid/content/ClipboardManager;")){
-            fprintf(log, "%s, %s\n", rule_info_database[11].category, rule_info_database[11].description);
-        }
-        if(strstr(str[i], "Landroid/util/Log;")){
-            for(uint32_t j = 0; j < str_count; j++){
-                if(strcasestr(str[j], "password") || strcasestr(str[j], "token") || strcasestr(str[j], "apikey")){
-                    fprintf(log, "%s, %s\n", rule_info_database[12].category, rule_info_database[12].description);
-                }
-            }
-        }
-        if(strstr(str[i], "/system/bin/su") || strstr(str[i], "/system/bin" ) || strstr(str[i], "/system/xbin") || strcasestr(str[i], "Superuser.apk")){
-            fprintf(log, "%s, %s\n", rule_info_database[15].category, rule_info_database[15].description);
-            break;
-        }
-    }
-    for (uint32_t i = 0; i < method_count; i++){
-        if(method[i] == "Runtime.exec"){
-            
-        }
-    }
-    
-    for(u_int32_t i = 0; i < meth_class_count; i++){
-    // Rule: Command Execution (HIGH)
-        /*if(strstr(meth_class[i], "Ljava/lang/Runtime;") && strstr(method[i], "exec")){
-            fprintf(log, "%s, %s\n", rule_info_database[8].category, rule_info_database[8].description);               
-        }*/
+        if(!str[i]) continue;
         
-        if(strstr(meth_class[i], "addJavascriptInterface")){
-            fprintf(log, "%s, %s\n", rule_info_database[13].category, rule_info_database[13].description);               
-        }
-        /*// Rule: Dynamic Code Execution (HIGH)
-        if(((strstr(meth_class[i], "Ljava/lang/System;"))||(strstr(meth_class[i], "Ljava/lang/Runtime;"))) && (strstr(method[i], "loadLibrary")||strstr(method[i], "load"))){
-                     fprintf(log, "[%s] %s\n", rule_info_database[3].category, rule_info_database[3].description);
-        }*/ // to be added , HIGH
+        if(strstr(str[i], "android.intent.action.BOOT_COMPLETED")) ev_boot_completed = str[i];
+        if(strstr(str[i], "SmsManager") || strstr(str[i], "sendTextMessage")) ev_sms_send = str[i];
+        
+        if(strstr(str[i], "Ldalvik/system/DexClassLoader;") || strstr(str[i], "Ldalvik/system/PathClassLoader;")) evidence_dex_loader = str[i];
+
+        if(strcasestr(str[i], "cipher") || strcasestr(str[i], "aes") || strcasestr(str[i], "encrypt")) ev_cipher = str[i];
+        if(strcasestr(str[i], "File") || strcasestr(str[i], "FileOutputStream")) ev_file_io = str[i];
+        if(strcasestr(str[i], "WindowManager")) ev_window_manager = str[i];
+
+        if(strcasestr(str[i], "ro.debuggable") || strcasestr(str[i], "generic_x86") || strcasestr(str[i], "sdk_google") || 
+           strcasestr(str[i], "com.android.emulator") || strcasestr(str[i], "qemu") || strcasestr(str[i], "vbox") || strcasestr(str[i], "bluestacks")) 
+           evidence_emulator_check = str[i];
+
+        if(strstr(str[i], "Landroid/app/usage/UsageStatsManager;")) evidence_usage_stats = str[i];
+        if(strstr(str[i], "Landroid/content/ClipboardManager;")) evidence_clipboard = str[i];
+
+        if(strstr(str[i], "Landroid/util/Log;")) ev_log_util = str[i];
+        if(strcasestr(str[i], "password") || strcasestr(str[i], "token") || strcasestr(str[i], "apikey")) ev_sensitive_string = str[i];
+
+        if(strstr(str[i], "/system/bin/su") || strstr(str[i], "/system/bin" ) || strstr(str[i], "/system/xbin") || strcasestr(str[i], "Superuser.apk")) evidence_root = str[i];
+
+        if(strstr(str[i], "MediaRecorder") || strstr(str[i], "AudioRecord") || strstr(str[i], "android.hardware.Camera") || strstr(str[i], "LocationManager")) ev_media_hardware = str[i];
+        
+        if(strstr(str[i], "exec") || strstr(str[i], "loadLibrary") || strstr(str[i], "getDeviceId") || strstr(str[i], "sendTextMessage")) ev_exec_cmd = str[i];
     }
+
+    // 3. Scan Classes
     for(uint32_t i = 0; i < class_count; i++){
-        if(strstr(class[i], "Http") || strstr(class[i], "Socket")){
-            for(uint32_t j = 0; j < str_count; j++){
-                if(strstr(str[j], "MediaRecorder") || strstr(str[j], "AudioRecord") || strstr(str[j], "android.hardware.Camera") || strstr(str[j], "LocationManager")){
-                    fprintf(log, "%s, %s\n", rule_info_database[5].category, rule_info_database[5].description);
-                }
-                // [9] Data Exfiltrat"su"ion
-                if(strstr(str[j], "getDeviceId") || strstr(str[j], "android_id")){
-                    fprintf(log, "%s %s\n", rule_info_database[9].category, rule_info_database[9].description);
-                }  
-            }
-        }
-        if(strstr(class[i], "Ljava/lang/reflect/Method;")){
-            for(uint32_t j = 0; j < str_count; j++){
-                if(strstr(str[j], "exec") || strstr(str[j], "loadLibrary") || strstr(str[j], "getDeviceId") || strstr(str[j], "sendTextMessage")){
-                    fprintf(log, "%s, %s\n", rule_info_database[6].category, rule_info_database[6].description);
-                }
-            }
+        if(!class[i]) continue;
+        if(strstr(class[i], "Http") || strstr(class[i], "Socket")) ev_http_socket = class[i];
+        if(strstr(class[i], "Ljava/lang/reflect/Method;")) ev_reflection = class[i];
+    }
+
+    // 4. Scan Methods
+    for(uint32_t i = 0; i < meth_class_count; i++){
+        if(meth_class[i] && method[i]){
+            if(strstr(meth_class[i], "Ljava/lang/Runtime;") && strstr(method[i], "exec")) evidence_runtime_exec = method[i]; // or combine class+method
+            if(strstr(meth_class[i], "addJavascriptInterface")) evidence_js_interface = meth_class[i];
+            if((strstr(meth_class[i], "Ljava/lang/System;") || strstr(meth_class[i], "Ljava/lang/Runtime;")) && 
+               (strstr(method[i], "loadLibrary") || strstr(method[i], "load"))) evidence_dex_loader = method[i]; // Reusing dex loader category logic or dynamic code?
+               // Actually dynamic code execution rule #3 uses "Dynamic Code Execution" desc.
         }
     }
 
+
+    // Logic Combinations
+    if(ev_broadcast_receiver && ev_boot_completed) evidence_broadcast_boot = ev_boot_completed;
+    if(ev_broadcast_receiver && ev_sms_send) evidence_sms_manager = ev_sms_send;
+    if(ev_cipher && ev_file_io && ev_window_manager) evidence_crypto_file = ev_cipher; // Ransomware heuristic
+    if(ev_log_util && ev_sensitive_string) evidence_log_secrets = ev_sensitive_string;
+    if(ev_http_socket && ev_media_hardware) evidence_camera_mic_socket = ev_media_hardware;
+    if(ev_reflection && ev_exec_cmd) evidence_reflection_exec = ev_exec_cmd;
+
+    // Logging Findings
+    if(evidence_accessibility) {
+        fprintf(log, "%s, %s\n", rule_info_database[0].category, rule_info_database[0].description);
+        add_finding(report, FINDING_DEX, rule_info_database[0].category, "CRITICAL", rule_info_database[0].description, "", filename, evidence_accessibility);
+    }
+    if(evidence_broadcast_boot) {
+        fprintf(log, "%s, %s\n", rule_info_database[1].category, rule_info_database[1].description);
+        add_finding(report, FINDING_DEX, rule_info_database[1].category, "CRITICAL", rule_info_database[1].description, "", filename, evidence_broadcast_boot);
+    }
+    if(evidence_notification_listener) {
+        fprintf(log, "%s, %s\n", rule_info_database[2].category, rule_info_database[2].description);
+        add_finding(report, FINDING_DEX, rule_info_database[2].category, "CRITICAL", rule_info_database[2].description, "", filename, evidence_notification_listener);
+    }
+    if(evidence_dex_loader) {
+        fprintf(log, "%s, %s\n", rule_info_database[3].category, rule_info_database[3].description);
+        add_finding(report, FINDING_DEX, rule_info_database[3].category, "CRITICAL", rule_info_database[3].description, "", filename, evidence_dex_loader);
+    }
+    if(evidence_crypto_file) {
+        fprintf(log, "%s, %s\n", rule_info_database[4].category, rule_info_database[4].description);
+        add_finding(report, FINDING_DEX, rule_info_database[4].category, "HIGH", rule_info_database[4].description, "", filename, evidence_crypto_file);
+    }
+    if(evidence_camera_mic_socket) {
+        fprintf(log, "%s, %s\n", rule_info_database[5].category, rule_info_database[5].description);
+        add_finding(report, FINDING_DEX, rule_info_database[5].category, "HIGH", rule_info_database[5].description, "", filename, evidence_camera_mic_socket);
+    }
+    if(evidence_reflection_exec) {
+        fprintf(log, "%s, %s\n", rule_info_database[6].category, rule_info_database[6].description);
+        add_finding(report, FINDING_DEX, rule_info_database[6].category, "HIGH", rule_info_database[6].description, "", filename, evidence_reflection_exec);
+    }
+    if(evidence_emulator_check) {
+        fprintf(log, "%s, %s\n", rule_info_database[7].category, rule_info_database[7].description);
+        add_finding(report, FINDING_DEX, rule_info_database[7].category, "HIGH", rule_info_database[7].description, "", filename, evidence_emulator_check);
+    }
+    if(evidence_runtime_exec) {
+        fprintf(log, "%s, %s\n", rule_info_database[8].category, rule_info_database[8].description);
+        add_finding(report, FINDING_DEX, rule_info_database[8].category, "HIGH", rule_info_database[8].description, "", filename, evidence_runtime_exec);
+    }
+    
+    if(evidence_usage_stats) {
+        fprintf(log, "%s, %s\n", rule_info_database[10].category, rule_info_database[10].description);
+        add_finding(report, FINDING_DEX, rule_info_database[10].category, "MEDIUM", rule_info_database[10].description, "", filename, evidence_usage_stats);
+    }
+    if(evidence_clipboard) {
+        fprintf(log, "%s, %s\n", rule_info_database[11].category, rule_info_database[11].description);
+        add_finding(report, FINDING_DEX, rule_info_database[11].category, "MEDIUM", rule_info_database[11].description, "", filename, evidence_clipboard);
+    }
+    if(evidence_log_secrets) {
+        fprintf(log, "%s, %s\n", rule_info_database[12].category, rule_info_database[12].description);
+        add_finding(report, FINDING_DEX, rule_info_database[12].category, "MEDIUM", rule_info_database[12].description, "", filename, evidence_log_secrets);
+    }
+    if(evidence_js_interface) {
+        fprintf(log, "%s, %s\n", rule_info_database[13].category, rule_info_database[13].description);
+        add_finding(report, FINDING_DEX, rule_info_database[13].category, "MEDIUM", rule_info_database[13].description, "", filename, evidence_js_interface);
+    }
+    if(evidence_sms_manager) {
+        fprintf(log, "%s %s\n", rule_info_database[14].category, rule_info_database[14].description);
+        add_finding(report, FINDING_DEX, rule_info_database[14].category, "MEDIUM", rule_info_database[14].description, "", filename, evidence_sms_manager);
+    }
+    if(evidence_root) {
+        fprintf(log, "%s, %s\n", rule_info_database[15].category, rule_info_database[15].description);
+        add_finding(report, FINDING_DEX, rule_info_database[15].category, "MEDIUM", rule_info_database[15].description, "", filename, evidence_root);
+    }
+    
     fclose(log);
 }

@@ -1,6 +1,6 @@
 #include "main.h"
 
-void isoFunc(char *iso_file);
+void isoFunc(char *so_file);
 int regex_scan(FILE*, char *);
 int regex_command(FILE *log, char *buffer, char* section_name);
 typedef struct unsafe{
@@ -178,12 +178,29 @@ SecretPattern SECRET_PATTERNS[] = {
 
 const size_t NUM_SECRET_PATTERNS = sizeof(SECRET_PATTERNS) / sizeof(SecretPattern);
 
+// Counters for unsafe functions (Global)
+static int global_unsafe_counts[sizeof(functions)/sizeof(unsafeFunctions)];
+
+void init_elf_stats() {
+    memset(global_unsafe_counts, 0, sizeof(global_unsafe_counts));
+}
+
+void report_elf_stats(Report *r) {
+    for(int i = 0; i < NUM_UNSAFE_FUNCTION; i++){
+        if(global_unsafe_counts[i] > 0){
+            char details[256];
+            snprintf(details, sizeof(details), "Count: %d", global_unsafe_counts[i]);
+            // Source file is "All .so files" or we can list them if we tracked them, but user asked for simple aggregation.
+            add_finding(r, FINDING_ELF, functions[i].unsafe_func, "HIGH", "Usage of unsafe function detected", details, "All scanned .so files", functions[i].unsafe_func);
+        }
+    }
+}
+
 void isoFunc(char *so_file){
     FILE *file, *log;
     // libhermestooling.so - 64, libcrsqlite.so - 64
     if((file = fopen(so_file, "rb")) == NULL){
         fprintf(stderr, "Unable to read *.so file\n");
-        fclose(file);
         return;
     }
     if((log = fopen("LogSofile.txt", "a+")) == NULL){
@@ -191,130 +208,212 @@ void isoFunc(char *so_file){
         fclose(file);
         return;
     }
-    Elf32_Ehdr ehdr32;
-    Elf64_Ehdr ehdr64;
-    Elf32_Shdr *shdr32;
-    Elf64_Shdr *shdr64;
-    //fseek(file, 0x0, SEEK_SET);
+
+    // Counters for unsafe functions (Local to this file, we add to global later)
+    // Actually, we can just add to global directly.
+    
     unsigned char e_ident[EI_NIDENT];
-    fread(&e_ident, 1, EI_NIDENT, file);
-    fseek(file, 0, SEEK_SET);
-    if(e_ident[EI_CLASS] == 1){
-        fread(&ehdr32, sizeof(Elf32_Ehdr), 1, file);
-        if (ehdr32.e_type == ET_DYN){
-            printf("%d\n", ehdr32.e_type);
-            printf("Valid *.so file\n");
-        }
-        else if(ehdr32.e_type != ET_DYN){
-            printf("Invalid *.so file\n");
-        }
-        printf("Section header: %u\n", ehdr32.e_shoff);
-        fseek(file, ehdr32.e_shoff, SEEK_SET);
-        //fread(&shdr32, sizeof(Elf32_Shdr), 1, file);
-        //printf("%u\n", shdr32[].sh_type);
-
+    if (fread(e_ident, 1, EI_NIDENT, file) != EI_NIDENT) {
+        fprintf(stderr, "Failed to read ELF identifier\n");
+        fclose(file);
+        return;
     }
-    else{
-        fread(&ehdr64, sizeof(Elf64_Ehdr), 1, file);
-        shdr64 = malloc(sizeof(Elf64_Shdr) * ehdr64.e_shnum);
-        if (ehdr64.e_type == ET_DYN){
-            printf("Valid shared object file\n");
-        }
-        else{
-            printf("Invalid *.so file\n");
-        }
-        printf("Check iso file %d\n", ehdr64.e_type);
-        printf("Section header: %u\n", ehdr64.e_shoff);
-        printf("Number of section headers: %u\n", ehdr64.e_shnum);
+    fseek(file, 0, SEEK_SET);
+
+    /* 
+       We will use Elf64 structures as the normalized form.
+       If the file is 32-bit, we read into 32-bit structs and promote them to 64-bit.
+    */
+    Elf64_Ehdr ehdr;
+    Elf64_Shdr *shdr = NULL;
+    int is_32bit = (e_ident[EI_CLASS] == ELFCLASS32);
+
+    if (is_32bit) {
+        Elf32_Ehdr ehdr32;
+        fread(&ehdr32, sizeof(Elf32_Ehdr), 1, file);
         
-        fseek(file, ehdr64.e_shoff, SEEK_SET);
-        for(int i = 0; i < ehdr64.e_shnum; i++){
-            fread(&shdr64[i], sizeof(Elf64_Shdr), 1, file);
-            printf("Section header: %d type: %d\n", i, shdr64[i].sh_type);
-    
-        }
-    
-        char *shstrtab, *dynsym_strtab, *symtab_strtab, *section_name;
-        shstrtab = malloc(shdr64[ehdr64.e_shstrndx].sh_size);
-        fseek(file, shdr64[ehdr64.e_shstrndx].sh_offset, SEEK_SET);
-        fread(shstrtab, shdr64[ehdr64.e_shstrndx].sh_size, 1, file);
+        // Normalize to Elf64
+        ehdr.e_ident[EI_CLASS] = ELFCLASS32; // Keep original class info if needed or just use flag
+        ehdr.e_type = ehdr32.e_type;
+        ehdr.e_machine = ehdr32.e_machine;
+        ehdr.e_version = ehdr32.e_version;
+        ehdr.e_entry = ehdr32.e_entry;
+        ehdr.e_phoff = ehdr32.e_phoff;
+        ehdr.e_shoff = ehdr32.e_shoff;
+        ehdr.e_flags = ehdr32.e_flags;
+        ehdr.e_ehsize = ehdr32.e_ehsize;
+        ehdr.e_phentsize = ehdr32.e_phentsize;
+        ehdr.e_phnum = ehdr32.e_phnum;
+        ehdr.e_shentsize = ehdr32.e_shentsize;
+        ehdr.e_shnum = ehdr32.e_shnum;
+        ehdr.e_shstrndx = ehdr32.e_shstrndx;
 
-        for(int i = 0; i < ehdr64.e_shnum; i++){
-            if(shdr64[i].sh_type == SHT_STRTAB){
-                section_name = shstrtab+shdr64[i].sh_name;
-                if(strcmp(section_name, ".dynstr") == 0){
-                    dynsym_strtab = malloc(shdr64[i].sh_size);
-                    if(!dynsym_strtab){perror("Failed to allocate memory for dynamic string table\n");}
-                    fseek(file, shdr64[i].sh_offset, SEEK_SET);
-                    if (fread(dynsym_strtab, 1, shdr64[i].sh_size, file) != shdr64[i].sh_size) {
-                    fprintf(stderr, "failed to read .dynstr\n"); return;
+        // Read Section Headers
+        Elf32_Shdr *shdr32 = malloc(sizeof(Elf32_Shdr) * ehdr.e_shnum);
+        if (!shdr32) { perror("malloc shdr32"); fclose(file); return; }
+        
+        fseek(file, ehdr.e_shoff, SEEK_SET);
+        fread(shdr32, sizeof(Elf32_Shdr), ehdr.e_shnum, file);
+
+        // Convert to Elf64_Shdr
+        shdr = malloc(sizeof(Elf64_Shdr) * ehdr.e_shnum);
+        if (!shdr) { perror("malloc shdr"); free(shdr32); fclose(file); return; }
+
+        for (int i = 0; i < ehdr.e_shnum; i++) {
+            shdr[i].sh_name = shdr32[i].sh_name;
+            shdr[i].sh_type = shdr32[i].sh_type;
+            shdr[i].sh_flags = shdr32[i].sh_flags;
+            shdr[i].sh_addr = shdr32[i].sh_addr;
+            shdr[i].sh_offset = shdr32[i].sh_offset;
+            shdr[i].sh_size = shdr32[i].sh_size;
+            shdr[i].sh_link = shdr32[i].sh_link;
+            shdr[i].sh_info = shdr32[i].sh_info;
+            shdr[i].sh_addralign = shdr32[i].sh_addralign;
+            shdr[i].sh_entsize = shdr32[i].sh_entsize;
+        }
+        free(shdr32);
+
+    } else {
+        // 64-bit Logic
+        fread(&ehdr, sizeof(Elf64_Ehdr), 1, file);
+        shdr = malloc(sizeof(Elf64_Shdr) * ehdr.e_shnum);
+        if (!shdr) { perror("malloc shdr"); fclose(file); return; }
+        
+        fseek(file, ehdr.e_shoff, SEEK_SET);
+        fread(shdr, sizeof(Elf64_Shdr), ehdr.e_shnum, file);
+    }
+
+    if (ehdr.e_type != ET_DYN) {
+        printf("Not a dynamic shared object (ET_DYN)\n");
+    }
+
+    printf("Analyzed ELF: %s-bit, Sections: %d\n", is_32bit ? "32" : "64", ehdr.e_shnum);
+
+    // --- Unified Analysis Loop ---
+    
+    // Load Section Header String Table
+    char *shstrtab = NULL;
+    if (ehdr.e_shstrndx != SHN_UNDEF && ehdr.e_shstrndx < ehdr.e_shnum) {
+         shstrtab = malloc(shdr[ehdr.e_shstrndx].sh_size);
+         if (shstrtab) {
+            fseek(file, shdr[ehdr.e_shstrndx].sh_offset, SEEK_SET);
+            fread(shstrtab, shdr[ehdr.e_shstrndx].sh_size, 1, file);
+         }
+    }
+    
+    // Pointers for symbol string tables
+    char *dynsym_strtab = NULL;
+    char *symtab_strtab = NULL;
+
+    // First pass: locate string tables
+     for(int i = 0; i < ehdr.e_shnum; i++){
+        if (!shstrtab) break;
+        char *section_name = shstrtab + shdr[i].sh_name;
+        
+        if(shdr[i].sh_type == SHT_STRTAB) {
+            if(strcmp(section_name, ".dynstr") == 0){
+                dynsym_strtab = malloc(shdr[i].sh_size);
+                if(dynsym_strtab) {
+                    fseek(file, shdr[i].sh_offset, SEEK_SET);
+                    fread(dynsym_strtab, 1, shdr[i].sh_size, file);
+                }
+            }
+            if(strcmp(section_name, ".strtab") == 0){
+                symtab_strtab = malloc(shdr[i].sh_size);
+                if(symtab_strtab) {
+                    fseek(file, shdr[i].sh_offset, SEEK_SET);
+                    fread(symtab_strtab, 1, shdr[i].sh_size, file);
+                }
+            }
+        }
+    }
+
+    // Second pass: Process sections
+    for(int i = 0; i < ehdr.e_shnum; i++){
+        if (!shstrtab) continue;
+        char *section_name = shstrtab + shdr[i].sh_name;
+        
+        // 1. Content Scanning (Regex)
+        // Only scan sections that occupy space in file and are of interest
+        if(shdr[i].sh_type == SHT_PROGBITS || 
+           (shdr[i].sh_type == SHT_STRTAB && (strcmp(section_name, ".dynstr") == 0 || strcmp(section_name, ".strtab") == 0))) 
+        {
+            if (shdr[i].sh_size > 0 && shdr[i].sh_size < 100 * 1024 * 1024) { // Limit size scan to 100MB avoid DoS
+                char *content = malloc(shdr[i].sh_size + 1); // +1 for safety null term if treated as string
+                if (content) {
+                    fseek(file, shdr[i].sh_offset, SEEK_SET);
+                    fread(content, 1, shdr[i].sh_size, file);
+                    content[shdr[i].sh_size] = '\0';
+
+                    if(strcmp(section_name, ".rodata") == 0 || strcmp(section_name, ".data") == 0 ||
+                       strcmp(section_name, ".dynstr") == 0 || strcmp(section_name, ".strtab") == 0)
+                    {
+                         regex_scan(log, content);
+                         regex_command(log, content, section_name);
                     }
-                }
-                if(strcmp(section_name, ".strtab") == 0){
-                    symtab_strtab = malloc(shdr64[i].sh_size);
-                    fseek(file, shdr64[i].sh_offset, SEEK_SET);
-                    fread(symtab_strtab, 1, shdr64[i].sh_size,file);
+                    free(content);
                 }
             }
         }
-        for(int i = 0; i < ehdr64.e_shnum; i++){
-            section_name = shstrtab+shdr64[i].sh_name;
-            char *section_content;
-            section_content = malloc(shdr64[i].sh_size);
-            fseek(file, shdr64[i].sh_offset, SEEK_SET);
-            fread(section_content, shdr64[i].sh_size, 1, file);
-            if(shdr64[i].sh_type == SHT_PROGBITS){
-                printf("Index: %d %s\n", i, section_name);
-                printf("%s\n", section_content);
 
-                if(strcmp(section_name, ".rodata") == 0 || strcmp(section_name, ".data") == 0){
-                    regex_scan(log, section_content);
-                    regex_command(log, section_content, section_name);
-                }
-            }
-            if(shdr64[i].sh_type == SHT_STRTAB){
-                if(strcmp(section_name, ".dynstr") == 0 || strcmp(section_name, ".strtab") == 0){
-                    printf("Index: %d %s\n", i, section_name);
-                               
-                    regex_scan(log, dynsym_strtab);
-                    regex_command(log, dynsym_strtab, section_name);
-                }
-            }
-            if(shdr64[i].sh_type == SHT_DYNSYM || shdr64[i].sh_type == SHT_SYMTAB){
-                char *name_source = (shdr64[i].sh_type == SHT_DYNSYM) ? dynsym_strtab : symtab_strtab;
-                Elf64_Sym *elf64_sym = malloc(shdr64[i].sh_size);
-                
-                if(strcmp(section_name, ".dynsym") == 0 || strcmp(section_name, ".symtab") == 0){
-                    uint32_t sym_tables = shdr64[i].sh_size/shdr64[i].sh_entsize;
-                
-                    fseek(file, shdr64[i].sh_offset, SEEK_SET);
-                    fread(elf64_sym, shdr64[i].sh_size, 1, file);
-                    
-                    for(int j = 0; j < sym_tables; j++){
-                        if(ELF32_ST_TYPE(elf64_sym[j].st_info) == STT_FUNC && elf64_sym[j].st_shndx == SHN_UNDEF){
-                        
-                            char *sym_name = name_source+elf64_sym[j].st_name;
-                            printf("INFO: FOUND IMPORTED FUNCTION. Checking against rules...\n");
-                            for(int count = 0; count < NUM_UNSAFE_FUNCTION; count++){
+        // 2. Symbol Table Analysis
+        if(shdr[i].sh_type == SHT_DYNSYM || shdr[i].sh_type == SHT_SYMTAB){
+            char *name_source = (shdr[i].sh_type == SHT_DYNSYM) ? dynsym_strtab : symtab_strtab;
+            if (!name_source) continue;
+
+            // We must handle 32 vs 64 bit entries here
+            uint32_t entry_size = shdr[i].sh_entsize;
+            if (entry_size == 0) continue; 
+            uint32_t sym_count = shdr[i].sh_size / entry_size;
+
+            fseek(file, shdr[i].sh_offset, SEEK_SET);
+            
+            // Allocate a buffer for one entry (max size is Elf64_Sym)
+            // Or allocate entire table. Let's do entry-by-entry to avoid large allocations or 
+            // separate arrays. Actually, reading whole block is faster IO.
+            
+            void *sym_data = malloc(shdr[i].sh_size);
+            if(sym_data) {
+                fread(sym_data, shdr[i].sh_size, 1, file);
+
+                for(int j = 0; j < sym_count; j++){
+                    char *sym_name = NULL;
+                    unsigned char type = 0;
+                    uint16_t shndx = 0;
+
+                    if (is_32bit) {
+                         Elf32_Sym *sym32 = (Elf32_Sym *)((char*)sym_data + j * sizeof(Elf32_Sym));
+                         type = ELF32_ST_TYPE(sym32->st_info);
+                         shndx = sym32->st_shndx;
+                         sym_name = name_source + sym32->st_name;
+                    } else {
+                         Elf64_Sym *sym64 = (Elf64_Sym *)((char*)sym_data + j * sizeof(Elf64_Sym));
+                         type = ELF64_ST_TYPE(sym64->st_info);
+                         shndx = sym64->st_shndx;
+                         sym_name = name_source + sym64->st_name;
+                    }
+
+                    if(type == STT_FUNC && shndx == SHN_UNDEF){
+                         for(int count = 0; count < NUM_UNSAFE_FUNCTION; count++){
                                 if(strcmp(sym_name, functions[count].unsafe_func) == 0){
+                                    global_unsafe_counts[count]++;
                                     fprintf(log, "INFO: FOUND IMPORTED FUNCTION. Checking against rules...\n");
                                     fprintf(log, "\tVULNERABILITY DETECTED: Use of insecure imported function: %s\n", sym_name);
                                 }
-                                /*else{
-                                    fprintf(log, "INFO: Imported function %s is not on the high-risk list.\n", sym_name);
-                                }*/
-                            }
-    
-                        }
+                         }
                     }
-
-                }   
+                }
+                free(sym_data);
             }
         }
+    }
 
-    } 
-
+    if (shdr) free(shdr);
+    if (shstrtab) free(shstrtab);
+    if (dynsym_strtab) free(dynsym_strtab);
+    if (symtab_strtab) free(symtab_strtab);
     fclose(file);
+    fclose(log);
 }
 int regex_scan(FILE *log, char *buffer){
     for(int i = 0; i < NUM_SECRET_PATTERNS; i++){
