@@ -10,6 +10,10 @@ FS Analyzer is a static analysis tool designed for security auditing of Android 
 - **Secret Detection**: Regex-based scanning for hardcoded API keys, tokens, and private keys.
 - **JSON Reporting**: Generates detailed, machine-readable reports including forensic evidence and risk levels.
 
+> [!IMPORTANT]
+> **Contextual Analysis Required**: These findings represent potential vulnerabilities and patterns that should be cross-referenced with the application's intended purpose. A detection (e.g., use of `system()`) is an indicator of risk, but not necessarily a harmful vulnerability in all contexts.
+
+
 ## Prerequisites
 The project depends on the following libraries:
 - **libxml2**: Used for parsing Android XML manifests.
@@ -46,5 +50,4 @@ Run the analyzer by providing the path to the extracted APK directory or file sy
 - **Permission Denied**: Some operations (like scanning certain directories) might require read permissions. If analyzing system files, you may need `sudo`.
 - **delete.sh**: On exit, the program attempts to execute `delete.sh`. Ensure this file exists and is executable (`chmod +x delete.sh`), or the program will report an execution error at the very end.
 
-## Session Analysis
-For a living log of recent technical changes and refactors performed during development, see [session_analysis.json](./session_analysis.json).
+
