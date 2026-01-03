@@ -1,0 +1,87 @@
+Great! Since you’re an intermediate in C and likely balancing other things too, here’s a realistic **12-week timeline** broken into **weekly goals and tasks**. This assumes a part-time schedule (5–10 hrs/week). If you want to go faster or slower, we can adjust.
+
+---
+
+### **WEEKLY PROJECT PLAN (C-based Threat Scanner)**
+
+#### **Week 1 – Project Setup & Scope Finalization**
+
+* Define exactly what you want to detect (e.g., suspicious functions, file permissions).
+* Choose your target file types (e.g., ELF on Linux).
+* Set up your development environment: `gcc`, `make`, `valgrind`, `readelf`, etc.
+* Create a Git repo & folder structure.
+
+#### **Week 2 – Learn File Format Internals**
+
+* Deep dive into your target file format (e.g., ELF or PE).
+* Practice parsing headers using `readelf` and `objdump`.
+* Sketch out how your scanner will inspect these files.
+
+#### **Week 3 – File Scanning Engine (Basic)**
+
+* Write C code to scan directories and identify files.
+* Implement file extension filtering and recursion.
+* Add logging (console + file).
+
+#### **Week 4 – Analyze File Headers**
+
+* Implement parsing of file headers (start with ELF if on Linux).
+* Extract info like entry point, section headers, and flags.
+* Print findings to console.
+
+#### **Week 5 – Static Detection Rules (Unsafe Functions)**
+
+* Write static code scanning functions to detect use of functions like `strcpy`, `gets`, `system`.
+* If scanning binaries: scan for strings using `strings` or custom binary analysis.
+
+#### **Week 6 – Add Signature Checking (Simple)**
+
+* Create a simple hash database (SHA256 or MD5 of known bad files).
+* Implement hashing with `openssl` or custom logic.
+* Compare scanned files to your local "threat DB".
+
+#### **Week 7 – Scan File Metadata / Permissions**
+
+* Use `stat()` and `access()` to detect risky file permissions (e.g., SUID, world-writable).
+* Detect hidden or suspicious file names.
+
+#### **Week 8 – Reporting Engine**
+
+* Design a CLI report format (color-coded risk levels).
+* Add logging options: text file, JSON format (optional).
+* Include summary: scanned files, threats found, issues flagged.
+
+#### **Week 9 – Modularization & CLI Options**
+
+* Refactor code into modules: scanner, analysis, reporter, etc.
+* Add command-line options: `-d` for directory, `-f` for file, `-r` for recursive, etc.
+
+#### **Week 10 – Testing & Validation**
+
+* Test on sample files (create test cases with insecure code or patterns).
+* Use the EICAR test file or similar safe examples.
+* Tune detection logic to reduce false positives.
+
+#### **Week 11 – Optimization & Polish**
+
+* Improve performance (e.g., scan speed, memory usage).
+* Add better error handling.
+* Clean up console output & formatting.
+
+#### **Week 12 – Documentation & Wrap-up**
+
+* Write a README with usage examples.
+* Comment your code for clarity.
+* Package as a CLI tool with a `Makefile`.
+* (Optional) Add a short demo or documentation video.
+
+---
+
+Would you like this as a downloadable `.md` file or something like a Trello-style board outline for task tracking?
+
+
+access token
+eyJhbGciOiJFUzI1NiIsImtpZCI6ImZ2ZkRHRkhxdjVtdHAxUlN1SzJUTE8tUFdDa3BZMU1Gbi1MWTFyX0s2MzQiLCJ0eXAiOiJEQVQifQ.eyJhdWRzIjpudWxsLCJudCI6IkFOIiwiYWlkIjoiNjM3MDY1IiwiZGlkIjoiMjY0NjY4OCIsInJudyI6MTc2MTY2ODI3NiwianRpIjoiMzg3YmEwOTctM2ZjOC00NjAwLWIwYzItNjViZjAyNDI0NjQzIiwiaXNzIjoidHdpbmdhdGUiLCJhdWQiOiJvbG93b3lvYmFiYWppZGUiLCJleHAiOjE3NjE2NzE1OTQsImlhdCI6MTc2MTY2Nzk5NCwidmVyIjoiNCIsInRpZCI6IjE4NDE3MSIsInJuZXRpZCI6IjI0Mzg0NiJ9.uyKI3m7Fa-8YkCmGqSRHiTSYs8lRur5plxLrrc0Fzby3dJFuMx56rU9h8uVUu8zpTJ-g2RyouSHWbabClWVieg
+
+refresh token:
+AYTSid2naztOsXs90pPGfVhuaC1PodV1kF6lkXUAZ1pRzW7yquXUXLqNIzugneuQyXwI4kKY4Tm2mK9l5fD0OQIMBwWP5d_as3rrHGjN_7Wf6tIuUt-fMbraPwDcyk_aCTA3Iw

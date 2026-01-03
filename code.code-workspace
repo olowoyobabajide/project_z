@@ -1,0 +1,23 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"window.confirmSaveUntitledWorkspace": false,
+		"zenMode.centerLayout": false,
+		"zenMode.hideActivityBar": false,
+		"zenMode.fullScreen": false,
+		"zenMode.hideLineNumbers": false,
+		"zenMode.hideStatusBar": false,
+		"zenMode.restore": false,
+		"files.associations": {
+			"typeinfo": "c",
+			"text_encoding": "c",
+			"string.h": "c",
+			"cstdint": "c"
+		},
+		"geminicodeassist.agentDebugMode": true
+	}
+}

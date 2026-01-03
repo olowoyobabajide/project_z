@@ -1,0 +1,82 @@
+{
+  "project_name": "C-Based Static Security Scanner",
+  "overview": {
+    "purpose": "Static analysis of Android-related files to detect potential security threats such as malicious hashes, unsafe binaries, and suspicious configurations.",
+    "analysis_type": "Static analysis only",
+    "platform": "POSIX / Linux",
+    "language": "C"
+  },
+  "structure": {
+    "root_files": [
+      "main.c",
+      "main.h",
+      "analyse.c",
+      "analyse.h",
+      "analyseDex.c",
+      "analyseDex.h",
+      "dex.c",
+      "dex.h",
+      "flaghash.c",
+      "flaghash.h",
+      "riskyfile.c",
+      "riskyfile.h",
+      "isofunc.c",
+      "isofunc.h",
+      "delete.sh",
+      "Flagged_Hash_List.csv"
+    ],
+    "src_directory": [
+      "ch_dir.c",
+      "check_all.c",
+      "check_dex.c",
+      "check_manifest.c",
+      "check_so.c",
+      "checks.h"
+    ]
+  },
+  "build": {
+    "method": "Manual compilation",
+    "example_command": "gcc -I. *.c src/*.c -o fs_analyzer $(pkg-config --cflags --libs libxml-2.0) -lssl -lcrypto",
+    "dependencies": [
+      "libxml2",
+      "OpenSSL (libssl, libcrypto)"
+    ]
+  },
+  "execution_flow": [
+    "Program starts in main()",
+    "Command-line arguments are parsed",
+    "Manifest analysis is performed",
+    "DEX files are analyzed",
+    "Shared object (.so) files are scanned",
+    "Full directory scan is executed",
+    "Results are printed or written to JSON output"
+  ],
+  "modules": {
+    "main.c": "Controls program execution and report generation",
+    "analyse.c": "Coordinates scanning logic",
+    "analyseDex.c": "Handles DEX analysis",
+    "dex.c": "Low-level DEX parsing",
+    "check_manifest.c": "Parses AndroidManifest.xml",
+    "check_dex.c": "Performs DEX scanning",
+    "check_so.c": "Analyzes shared object files",
+    "check_all.c": "Performs recursive directory scanning",
+    "ch_dir.c": "Directory traversal helper",
+    "flaghash.c": "Hash-based malware detection",
+    "riskyfile.c": "Detects risky file patterns",
+    "isofunc.c": "Utility and helper functions"
+  },
+  "security_review": {
+    "issues": [
+      "Hardcoded directory path in filecheckAll()",
+      "Limited input validation",
+      "No sandboxing or privilege separation",
+      "Minimal error handling"
+    ],
+    "strengths": [
+      "Modular design",
+      "Clear separation of responsibilities",
+      "Static analysis approach",
+      "Extensible architecture"
+    ]
+  }
+}

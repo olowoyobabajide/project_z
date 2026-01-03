@@ -1,0 +1,123 @@
+Permission: android.permission.INTERNET
+Risk Level:MODERATE
+Reason: Allows network access; dangerous when combined with data permissions
+-------
+Permission: android.permission.READ_EXTERNAL_STORAGE
+Risk Level: DANGEROUS
+Reason: Can read all user files (photos, docs, etc.)
+-------
+Permission: android.permission.RECORD_AUDIO
+Risk Level: DANGEROUS
+Reason: Allows eavesdropping through microphone
+-------
+Permission: android.permission.SYSTEM_ALERT_WINDOW
+Risk Level: DANGEROUS
+Reason: Can draw overlays (used in phishing/overlay attacks)
+-------
+Permission: android.permission.VIBRATE
+Risk Level: LOW
+Reason: Used to trigger vibrations; no access to sensitive data
+-------
+Permission: android.permission.WRITE_EXTERNAL_STORAGE
+Risk Level: DANGEROUS
+Reason: Can modify or delete files on external storage
+-------
+Permission: android.permission.CAMERA
+Risk Level: DANGEROUS
+Reason: Can take photos/videos without user's knowledge
+-------
+
+Activity Checker
+
+Activity: android.intent.action.MAIN
+Intent-filter: yes                                    
+Exported: 
+Perrmission: None
+Risk Level: Dangerous
+Reason: Exported activity with intent-filter and no access restriction
+-------
+
+Activity: android.intent.category.LAUNCHER
+Intent-filter: yes                                    
+Exported: 
+Perrmission: None
+Risk Level: Dangerous
+Reason: Exported activity with intent-filter and no access restriction
+-------
+
+Activity: android.intent.action.VIEW
+Intent-filter: yes                                    
+Exported: 
+Perrmission: None
+Risk Level: Dangerous
+Reason: Exported activity with intent-filter and no access restriction
+-------
+
+Activity: android.intent.category.DEFAULT
+Intent-filter: yes                                    
+Exported: 
+Perrmission: None
+Risk Level: Dangerous
+Reason: Exported activity with intent-filter and no access restriction
+-------
+
+Activity: android.intent.category.BROWSABLE
+Intent-filter: yes                                    
+Exported: 
+Perrmission: None
+Risk Level: Dangerous
+Reason: Exported activity with intent-filter and no access restriction
+-------
+
+Activity Checker
+
+Activity: com.canhub.cropper.CropImageActivity
+Intent-filter: No                    
+Exported: false
+Permission: None
+Risk Level: Moderate
+Reason: Exported activity without an intent-filter. Can be launched by name. Is this necessary?
+-------
+Service: com.google.android.gms.metadata.ModuleDependencies
+Exported: false
+Permission: None
+Intent filter: NO
+Reason: SAFE (Service not exported)
+------
+Intent filter: YES
+Reason: SAFE (Service not exported)
+------
+Intent filter: NO
+Reason: SAFE (Service not exported)
+------
+Intent filter: NO
+Reason: SAFE (Service not exported)
+------
+Intent filter: NO
+Reason: SAFE (Service not exported)
+------
+Receiver
+Receiver name: androidx.profileinstaller.ProfileInstallReceiver
+Exported: true
+Permission: android.permission.DUMP
+Risk: Moderate - only apps signed with the same key (or granted this permission explicitly) can send the broadcast
+Provider name: com.reactnativecommunity.webview.RNCWebViewFileProvider
+Exported: false
+SAFE: Provider not exported
+------
+Provider name: expo.modules.filesystem.FileSystemFileProvider
+Exported: false
+SAFE: Provider not exported
+------
+Provider name: expo.modules.imagepicker.fileprovider.ImagePickerFileProvider
+Exported: false
+SAFE: Provider not exported
+------
+Provider name: com.canhub.cropper.CropFileProvider
+Exported: false
+SAFE: Provider not exported
+------
+Provider name: androidx.startup.InitializationProvider
+Exported: false
+SAFE: Provider not exported
+------
