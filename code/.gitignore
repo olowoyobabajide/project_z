@@ -8,4 +8,5 @@
 *.dex
 /*.sh
 *.so
-.json
+*.json
+!session_analysis.json
