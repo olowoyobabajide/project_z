@@ -54,6 +54,10 @@
     ],
     "recent_changes": [
         {
+            "file": ".gitignore",
+            "modification": "Added *.json to ignore list (excluding session_analysis.json)."
+        },
+        {
             "file": "README.md",
             "modification": "Initial creation of project documentation."
         },
