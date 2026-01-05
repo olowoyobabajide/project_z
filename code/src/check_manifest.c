@@ -30,6 +30,7 @@ int manifestFile(const char *path, const struct stat *sb, int typeflag, struct F
                 if (sb->st_mode & 0740)// check this with the access function instead
                 {
                     if (current_report) {
+                        printf("Analyzing Manifest: %s\n", base_path);
                         analyse_per(base_path, current_report);
                     }
                 }

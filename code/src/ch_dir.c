@@ -23,9 +23,9 @@ static int nfile(const char *path, const struct stat *sb, int typeflag, struct F
         char apk[PATH_MAX * 2];
         size_t len = strlen(buffer);
         if (len > 0 && buffer[len - 1] == '/') {
-            snprintf(apk, sizeof(apk) - 1, "apktool d -s %s -o %stemp", path, buffer);
+            snprintf(apk, sizeof(apk) - 1, "apktool d -s -f \"%s\" -o %stemp", path, buffer);
         } else {
-            snprintf(apk, sizeof(apk) - 1, "apktool d -s %s -o %s/temp", path, buffer);
+            snprintf(apk, sizeof(apk) - 1, "apktool d -s -f \"%s\" -o %s/temp", path, buffer);
         }
 
         if (fnmatch("*.apk", basename(base_path), 0) == 0)

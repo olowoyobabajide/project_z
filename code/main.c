@@ -52,6 +52,7 @@ int main(int argc, char **argv)
     remove("manifestLog.txt");
     remove("dex_analysis.txt");
 
+    printf("Input path: %s\n", buffer);
     apk_check(buffer);
 
     char buf_path[PATH_MAX];
@@ -78,6 +79,8 @@ int main(int argc, char **argv)
         free_report(report);
     }
     
-    execve("delete.sh", NULL, NULL);
+    //execve("delete.sh", NULL, NULL);
+
+    cleanup(buffer);
 
 }

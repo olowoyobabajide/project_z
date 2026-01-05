@@ -265,8 +265,6 @@ uint32_t readULEB128(FILE *file){
 }
 
 void typeIdTable(char *dex, FILE *dexLog){
-    printf("typeIdTable: called\n"); fflush(stdout);
-
     FILE *file;
 
     if((file = fopen(dex, "rb"))== NULL){
@@ -337,11 +335,11 @@ void typeIdTable(char *dex, FILE *dexLog){
     classDefTable(dex, dexLog, string_index, dataInMemory.strings);
  
     cleanup:
-        /*free(string_index);
+        free(string_index);
         for(uint32_t a = 0; a < string_size; a++){
             if (string_data_array[a])free(string_data_array[a]);
         }
-        free(string_data_array);*/
+        free(string_data_array);
         fclose(file);
 }
 
@@ -523,7 +521,6 @@ void classDefTable(char *dex, FILE*dexLog,uint32_t *class_index, char **string_d
         fprintf(dexLog, "[CLASS] name: %s, ", dataInMemory.class_definitions[j]);
         fprintf(dexLog, "flags: %u, \n", access_flags[j]);
     }
-    printf("Calling class data items\n");
     class_data_item(dex, dexLog, class_data_off, class_defs_size);
 
     cleanup:
