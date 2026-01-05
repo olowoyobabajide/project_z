@@ -518,18 +518,12 @@ int analyse_per(char *file, Report *r)
         return EXIT_FAILURE;
     }
 
-    printf("before parsetag call\n");
     parsedoc(file, "manifest", "manifest", log, r, parsetag_permissions); 
     parsedoc(file, "manifest", "application", log, r, parsetag_components);
-    printf("Calling parsepermission\n");
     parsedoc("permission.xml", "root", "uses-permission", log, r, parsePermission);
-    printf("Calling parseactivity\n");
     parsedoc("activity.xml", "root", "activity", log, r, parseActivity);
-    printf("Calling parseservice\n");
     parsedoc("services.xml", "root", "service", log, r, parseService);
-    printf("Calling parsereceiver\n");
     parsedoc("receiver.xml", "root", "receiver", log, r, parseReceiver);
-    printf("Calling parseprovider\n");
     parsedoc("providers.xml", "root", "provider", log, r, parseProvider);
 
     fclose(log);

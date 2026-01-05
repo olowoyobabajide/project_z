@@ -46,7 +46,6 @@ int dexScan(char *dex, Report *report)
 {
 
     logdex(dex);
-    printf("main: before analyseDex\n"); fflush(stdout);
     analyseDex(
         dataInMemory.strings, dataInMemory.strings_count,
         dataInMemory.type_descriptors, dataInMemory.type_descriptors_count,
@@ -57,7 +56,6 @@ int dexScan(char *dex, Report *report)
         report,
         dex
     );
-    printf("main: after analyseDex\n"); fflush(stdout);
     freeKeepMemory(dataInMemory);
     
     return 0;
@@ -656,14 +654,9 @@ int logdex(char *dex){
     }
     printf("logdex: opened log file\n"); fflush(stdout);
 
-    printf("logdex: calling dexheaderScan\n"); fflush(stdout);
     dexheaderScan(dex, dexLog);
-    printf("logdex: calling dexstringData\n"); fflush(stdout);
     dexstringData(dex, dexLog);
-    printf("logdex: calling typeIdTable\n"); fflush(stdout);
     typeIdTable(dex, dexLog);
-    printf("logdex: finished all calls\n"); fflush(stdout);
-
     fclose(dexLog);
     return(EXIT_SUCCESS);
 }

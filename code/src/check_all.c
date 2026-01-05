@@ -22,7 +22,7 @@ int nfile(const char *path, const struct stat *sb, int typeflag, struct FTW *ftb
         {
             if (sb->st_mode & 0740)// check this with the access function instead
             {
-                printf("%s\n", base_path);
+                //printf("%s\n", base_path);
                 verifyHash(base_path);
                 suid(base_path);
                 

@@ -1,9 +1,9 @@
 #include "main.h"
 
-// gcc -I. *.c src/*.c -o fs_analyzer $(pkg-config --cflags --libs libxml-2.0) -lssl -lcrypto
+char buffer[PATH_MAX];
+
 int main(int argc, char **argv)
 {
-    static char buffer[PATH_MAX];
     char *json_output_file = NULL;
     char *input_path = NULL;
 
@@ -55,19 +55,28 @@ int main(int argc, char **argv)
     printf("Calling apk_check with path: %s\n", buffer);
     apk_check(buffer);
 
-    printf("Calling filecheckManifest with path: %s\n", buffer);
-    filecheckManifest(buffer, report); // For Android Manifest
+    char buf_path[PATH_MAX];
+    size_t len = strlen(buffer);
+    if (len > 0 && buffer[len - 1] == '/') {
+        snprintf(buf_path, sizeof(buf_path), "%stemp", buffer);
+    } else {
+        snprintf(buf_path, sizeof(buf_path), "%s/temp", buffer);
+    }
+
+    printf("Calling filecheckManifest with path: %s\n", buf_path);
+    filecheckManifest(buf_path, report); // For Android Manifest
     init_elf_stats();
     
-    printf("Calling filecheckDex with path: %s\n", buffer);
-    filecheckDex(buffer, report); // For .dex files 
-    printf("Calling filecheckso with path: %s\n", buffer);
-    filecheckso(buffer); // Report passed via global finalizer
+    printf("Calling filecheckDex with path: %s\n", buf_path);
+    filecheckDex(buf_path, report); // For .dex files 
+    printf("Calling filecheckso with path: %s\n", buf_path);
+    filecheckso(buf_path); // Report passed via global finalizer
     
     report_elf_stats(report);
 
-    printf("Calling filecheckAll with path: %s/temp\n", buffer); // Hardcoded temp path issue// for checking all files
-    filecheckAll("/home/jyde/Documents/project_z/code/temp"); // for checking all files
+    printf("Calling filecheckAll with path: %s\n", buf_path); // Dynamic temp path
+    
+    filecheckAll(buf_path); // for checking all files
     
     if (report && json_output_file) {
         save_report_json(report, json_output_file);

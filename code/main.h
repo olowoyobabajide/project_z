@@ -21,6 +21,7 @@
 #include <elf.h>
 
 #define PATH_MAX 256
+extern char buffer[PATH_MAX];
 
 #include "analyse.h"
 #include "analyseDex.h"
