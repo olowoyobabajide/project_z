@@ -66,7 +66,7 @@ void threat_hash(char *file){
     db_loaded = 1;
 }
 
-void verifyHash(char *file){
+void verifyHash(char *file, Report *r){
     FILE *doc;
 
     if((doc = fopen(file, "r")) == NULL){
@@ -107,8 +107,7 @@ void verifyHash(char *file){
 
     for(uint32_t md5_count = 0; md5_count < count_md5; md5_count++){
         if(strcmp(md5_string, threatmd5.hash[md5_count]) == 0){
-            printf("%s\n", md5_string);
-            printf("VULNERABILTY FOUND! md5hash\n");
+            add_finding(r, FINDING_HASH, "MD5 Threat Match", "CRITICAL", "File hash matches a known threat signature.", "MD5", file, md5_string);
         }
     }
 
@@ -127,8 +126,7 @@ void verifyHash(char *file){
 
     for(int sha_count = 0; sha_count < count_sha1; sha_count++){
         if(strcmp(sha1_string, threatsha1.hash[sha_count]) == 0){
-            printf("%s\n", sha1_string);
-            printf("VULNERABILTY FOUND! sha1hash\n");
+            add_finding(r, FINDING_HASH, "SHA1 Threat Match", "CRITICAL", "File hash matches a known threat signature.", "SHA1", file, sha1_string);
         }
     }
 
@@ -145,8 +143,7 @@ void verifyHash(char *file){
     sha256_string[64] = '\0';
     for(int sha_count = 0; sha_count < count_sha256; sha_count++){
         if(strcmp(sha256_string, threatsha256.hash[sha_count]) == 0){ // Fixed compare string
-            printf("%s\n", sha256_string);
-            printf("VULNERABILTY FOUND! sha256hash\n");
+            add_finding(r, FINDING_HASH, "SHA256 Threat Match", "CRITICAL", "File hash matches a known threat signature.", "SHA256", file, sha256_string);
         }
     }
 

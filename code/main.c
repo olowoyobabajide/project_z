@@ -52,7 +52,6 @@ int main(int argc, char **argv)
     remove("manifestLog.txt");
     remove("dex_analysis.txt");
 
-    printf("Calling apk_check with path: %s\n", buffer);
     apk_check(buffer);
 
     char buf_path[PATH_MAX];
@@ -63,20 +62,15 @@ int main(int argc, char **argv)
         snprintf(buf_path, sizeof(buf_path), "%s/temp", buffer);
     }
 
-    printf("Calling filecheckManifest with path: %s\n", buf_path);
     filecheckManifest(buf_path, report); // For Android Manifest
     init_elf_stats();
     
-    printf("Calling filecheckDex with path: %s\n", buf_path);
     filecheckDex(buf_path, report); // For .dex files 
-    printf("Calling filecheckso with path: %s\n", buf_path);
     filecheckso(buf_path); // Report passed via global finalizer
     
     report_elf_stats(report);
 
-    printf("Calling filecheckAll with path: %s\n", buf_path); // Dynamic temp path
-    
-    filecheckAll(buf_path); // for checking all files
+    filecheckAll(buf_path, report); // for checking all files
     
     if (report && json_output_file) {
         save_report_json(report, json_output_file);

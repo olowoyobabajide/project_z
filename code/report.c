@@ -86,6 +86,7 @@ static const char* type_to_string(FindingType t) {
         case FINDING_PROVIDER: return "Provider";
         case FINDING_DEX: return "DexAnalysis";
         case FINDING_ELF: return "ElfAnalysis";
+        case FINDING_HASH: return "HashThreat";
         default: return "Unknown";
     }
 }

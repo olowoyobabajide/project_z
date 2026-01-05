@@ -85,7 +85,6 @@ void dexPrint(char *str, uint32_t value, FILE *log){
 }
 
 void dexheaderScan(char *dex, FILE *dexLog){
-    printf("dexheaderScan: called\n"); fflush(stdout);
 
     FILE *file;
     bool safe_dex = true;
@@ -187,7 +186,6 @@ void dexheaderScan(char *dex, FILE *dexLog){
  }
 
 void dexstringData(char *dex, FILE *dexLog){
-    printf("dexstringData: called\n"); fflush(stdout);
 
     FILE *file;
 
@@ -334,12 +332,8 @@ void typeIdTable(char *dex, FILE *dexLog){
         dataInMemory.type_descriptors[i] = string_data_array[string_index[i]];
         fprintf(dexLog, "[TYPE] index=%d, decriptor=%s\n", string_index[i], dataInMemory.type_descriptors[i]);
     }
-    printf("MethodIdTable: calling methodIdTable\n"); fflush(stdout);
     methodIdTable(dex, dexLog, string_index, dataInMemory.strings);
-    printf("MethodIdTable: called MethodIdTable\n"); fflush(stdout);
-    printf("typeIdTable: calling fieldIdTable\n"); fflush(stdout);
     fieldIdTable(dex, dexLog, string_index, dataInMemory.strings);
-    printf("typeIdTable: calling classDefTable\n"); fflush(stdout);
     classDefTable(dex, dexLog, string_index, dataInMemory.strings);
  
     cleanup:
@@ -386,12 +380,7 @@ void methodIdTable(char *dex, FILE*dexLog, uint32_t *type_index, char **string_d
         fread(&proto_idx[i], sizeof(uint16_t), 1, file);
         fread(&name_idx[i], sizeof(uint32_t), 1, file);
     }
-    /*uint32_t *method_idx;
-    method_idx = malloc(sizeof(uint32_t) * method_ids_size);
-    if(method_idx == NULL){
-        perror("Error allocating memory for method ids sizes\n");
-        goto cleanup;
-    }*/
+    
     uint32_t *type_idx_val;
     type_idx_val = malloc(sizeof(uint32_t)*method_ids_size);
 
@@ -403,21 +392,16 @@ void methodIdTable(char *dex, FILE*dexLog, uint32_t *type_index, char **string_d
     for (uint32_t a = 0; a < method_ids_size; a++) {
         
         type_idx_val[a] = type_index[class_idx[a]];
-        //printf("hello, I am in methoid\n");
         dataInMemory.method_definitions[a] = string_data_array[name_idx[a]];
-        //printf("hello, I am in methoid2\n");
-        //printf("%s\n", dataInMemory.method_definitions[a]);
         dataInMemory.method_class[a] = string_data_array[type_idx_val[a]];
-        //printf("%s\n", dataInMemory.method_definitions[a]);
         fprintf(dexLog, "[METHOD] name:%s ", dataInMemory.method_definitions[a]);
         fprintf(dexLog, "class:%s\n", dataInMemory.method_class[a]);
     }
 
     cleanup:
-        //free(class_idx);
-        //free(name_idx);
+        free(class_idx);
+        free(name_idx);
         free(proto_idx);
-        //free(method_idx);
         fclose(file);
 }
 
@@ -548,11 +532,6 @@ void classDefTable(char *dex, FILE*dexLog,uint32_t *class_index, char **string_d
         free(class_data_off);
         fclose(file);
 }
-// typedef struct resolvedMethod{
-//     uint32_t methodIdx;
-//     uint32_t accessFlags;
-//     uint32_t code_off;
-// }*method;
 
 // Helper to process a single code item
 void process_code_item(FILE *file, FILE *dexLog, uint32_t code_off, uint32_t method_idx) {
@@ -646,13 +625,11 @@ void code_item(char *dex, FILE *dexLog, method direct , method virtual, uint32_t
 }
 
 int logdex(char *dex){
-    printf("logdex: called\n"); fflush(stdout);
     FILE *dexLog = fopen("dexLog_" __TIME__"_" __DATE__".txt", "a+");
     if(dexLog == NULL){
         perror("logdex: fopen");
         return EXIT_FAILURE;
     }
-    printf("logdex: opened log file\n"); fflush(stdout);
 
     dexheaderScan(dex, dexLog);
     dexstringData(dex, dexLog);
@@ -663,34 +640,19 @@ int logdex(char *dex){
 
 void freeKeepMemory(keepMemory mem){
     if (mem.strings) {
-        // for(uint32_t i = 0; i < mem.strings_count; i++){
-        //     //free(mem.strings[i]);
-        // }
         free(mem.strings);
     }
     if (mem.method_definitions) {
-        // for(uint32_t i = 0; i < mem.method_definitions_count; i++){
-        //     //free(mem.method_definitions[i]);
-        // }
         free(mem.method_definitions);
     }
     if (mem.method_class) {
-        // for(uint32_t i = 0; i < mem.method_class_count; i++){
-        //     //free(mem.method_class[i]);
-        // }
         free(mem.method_class);
     }
     if (mem.class_definitions) {
-        // for(uint32_t i = 0; i < mem.class_definitions_count; i++){
-        //     //free(mem.class_definitions[i]);
-        // }
         free(mem.class_definitions);
     }
     if (mem.super_idx) {
-        // for(uint32_t i = 0; i < mem.super_idx_count; i++){
-        //     //free(mem.super_idx[i]);
-        // }
         free(mem.super_idx);
     }
-    
+
 }

@@ -13,6 +13,7 @@ typedef enum {
     FINDING_PROVIDER,
     FINDING_DEX,
     FINDING_ELF,
+    FINDING_HASH,
     FINDING_UNKNOWN
 } FindingType;
 
