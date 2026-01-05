@@ -48,6 +48,5 @@ Run the analyzer by providing the path to the extracted APK directory or file sy
 - **Missing libxml-2.0**: If you get an error like `libxml/parser.h: No such file or directory`, ensure `libxml2-dev` is installed and that `pkg-config` is correctly finding the flags.
 - **OpenSSL Linkage**: Ensure `-lssl -lcrypto` are at the end of your `gcc` command to resolve cryptographic functions.
 - **Permission Denied**: Some operations (like scanning certain directories) might require read permissions. If analyzing system files, you may need `sudo`.
-- **delete.sh**: On exit, the program attempts to execute `delete.sh`. Ensure this file exists and is executable (`chmod +x delete.sh`), or the program will report an execution error at the very end.
 
 
