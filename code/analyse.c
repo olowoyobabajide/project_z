@@ -1,20 +1,21 @@
 #include "main.h"
-#include <libxml/parser.h> 
-#include <libxml/tree.h>
+#include "src/dep/libxml/parser.h" 
+#include "src/dep/libxml/tree.h"
 #include "report.h"
 
-void parsetag_permissions(xmlDocPtr doc, xmlNodePtr cur, FILE *log, Report *r);
-void parsetag_components(xmlDocPtr doc, xmlNodePtr cur, FILE *log, Report *r);
-void parsedoc(char *xmlfile, char *root, char *node, FILE *log, Report *r, void(*xmlfunc)(xmlDocPtr, xmlNodePtr, FILE *, Report *));
+void parsetag_permissions(xmlDocPtr doc, xmlNodePtr cur, Report *r);
+void parsetag_components(xmlDocPtr doc, xmlNodePtr cur, Report *r);
+void parsedoc(char *xml_buffer, char *root, char *node, Report *r, void(*xmlfunc)(xmlDocPtr, xmlNodePtr, Report *));
 
-//extern char buffer[PATH_MAX];
-/*
-Over here we analyse the android manifest file for risky permissions and flags
-*/
+void parseActivity(xmlDocPtr doc, xmlNodePtr cur, Report *r);
+void parseService(xmlDocPtr doc, xmlNodePtr cur, Report *r);
+void parseReceiver(xmlDocPtr doc, xmlNodePtr cur, Report *r);
+void parseProvider(xmlDocPtr doc, xmlNodePtr cur, Report *r);
+void parsePermission(xmlDocPtr doc, xmlNodePtr cur, Report *r);
+
 #define keep 10000
 
 typedef struct{
-    //This struct details about the permissions found
     char *name;
     char *level;
 }rperm;
@@ -45,488 +46,171 @@ rperm rperms[] = {{"android.permission.READ_SMS","\nRisk Level: DANGEROUS\nReaso
 
 size_t NUM_PERMISSIONS = sizeof(rperms)/sizeof(rperm);
 
-void tag_perm(char *a);
-int analyse_per(char *a, Report *r);
+int analyse_per(char *xml_buffer, Report *r);
 
-typedef struct tag{
-    //A struct for the the tags activity, services...
-    char *tag;
-    char *f_tag;
-}tag;
-
-
-
-void parsetag_permissions(xmlDocPtr doc, xmlNodePtr cur, FILE *log, Report *r)
+void parsetag_permissions(xmlDocPtr doc, xmlNodePtr cur, Report *r)
 {
-    tag tags[] = {
-        {"uses-permission", "permission.xml"}
-    };
-    
-    size_t num_tags = sizeof(tags) / sizeof(tag);
-    FILE *files[num_tags];
-    xmlOutputBufferPtr outputs[num_tags];
-    cur = cur->children; // Iterate children of <manifest>
-
-    for (int i = 0; i < num_tags; i++) {
-        files[i] = fopen(tags[i].f_tag, "w");
-        if (files[i] == NULL) {
-            fprintf(stderr, "Error opening file %s\n", tags[i].f_tag);
-            for (int j = 0; j < i; j++) {
-                if (outputs[j]) {
-                    xmlOutputBufferWriteString(outputs[j], "\n</root>\n");
-                    xmlOutputBufferClose(outputs[j]);
-                }
-                if (files[j]) fclose(files[j]);
-            }
-            return;
-        }
-        outputs[i] = xmlOutputBufferCreateFile(files[i], NULL);
-        if(outputs[i]) {
-            xmlOutputBufferWriteString(outputs[i], "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"no\"?>\n");
-            xmlOutputBufferWriteString(outputs[i], "<root xmlns:android=\"http://schemas.android.com/apk/res/android\">\n");
-        }
-    }
-
+    cur = cur->children;
     while (cur != NULL) {
-        for (int i = 0; i < num_tags; i++) {
-            if ((!xmlStrcmp(cur->name, (const xmlChar *)tags[i].tag))) {
-                if(outputs[i]){
-                    xmlNodeDumpOutput(outputs[i], doc, cur, 0, 1, "UTF-8");
-                }
-                break;
-            }
+        if (!xmlStrcmp(cur->name, (const xmlChar *)"uses-permission")) {
+            parsePermission(doc, cur, r);
         }
         cur = cur->next;
     }
-
-    for (int i = 0; i < num_tags; i++) {
-        if (outputs[i]) {
-            xmlOutputBufferWriteString(outputs[i], "\n</root>\n");
-            xmlOutputBufferClose(outputs[i]);
-        }
-        if (files[i]) fclose(files[i]);
-    }
 }
 
-void parsetag_components(xmlDocPtr doc, xmlNodePtr cur, FILE *log, Report *r)
+void parsetag_components(xmlDocPtr doc, xmlNodePtr cur, Report *r)
 {
-    tag tags[] = {
-        {"activity", "activity.xml"},
-        {"service", "services.xml"},
-        {"receiver", "receiver.xml"},
-        {"provider", "providers.xml"}
-    };
-    
-    size_t num_tags = sizeof(tags) / sizeof(tag);
-    FILE *files[num_tags];
-    xmlOutputBufferPtr outputs[num_tags];
-    cur = cur->children; // Iterate children of <application>
-
-    for (int i = 0; i < num_tags; i++) {
-        files[i] = fopen(tags[i].f_tag, "w");
-        if (files[i] == NULL) {
-            fprintf(stderr, "Error opening file %s\n", tags[i].f_tag);
-            for (int j = 0; j < i; j++) {
-                if (outputs[j]) {
-                    xmlOutputBufferWriteString(outputs[j], "\n</root>\n");
-                    xmlOutputBufferClose(outputs[j]);
-                }
-                if (files[j]) fclose(files[j]);
-            }
-            return;
-        }
-        outputs[i] = xmlOutputBufferCreateFile(files[i], NULL);
-        if(outputs[i]) {
-            xmlOutputBufferWriteString(outputs[i], "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"no\"?>\n");
-            xmlOutputBufferWriteString(outputs[i], "<root xmlns:android=\"http://schemas.android.com/apk/res/android\">\n");
-        }
-    }
-
+    cur = cur->children;
     while (cur != NULL) {
-        for (int i = 0; i < num_tags; i++) {
-            if ((!xmlStrcmp(cur->name, (const xmlChar *)tags[i].tag))) {
-                if(outputs[i]){
-                    xmlNodeDumpOutput(outputs[i], doc, cur, 0, 1, "UTF-8");
-                }
-                break;
-            }
+        if (!xmlStrcmp(cur->name, (const xmlChar *)"activity")) {
+            parseActivity(doc, cur, r);
+        } else if (!xmlStrcmp(cur->name, (const xmlChar *)"service")) {
+            parseService(doc, cur, r);
+        } else if (!xmlStrcmp(cur->name, (const xmlChar *)"receiver")) {
+            parseReceiver(doc, cur, r);
+        } else if (!xmlStrcmp(cur->name, (const xmlChar *)"provider")) {
+            parseProvider(doc, cur, r);
         }
         cur = cur->next;
     }
-
-    for (int i = 0; i < num_tags; i++) {
-        if (outputs[i]) {
-            xmlOutputBufferWriteString(outputs[i], "\n</root>\n");
-            xmlOutputBufferClose(outputs[i]);
-        }
-        if (files[i]) fclose(files[i]);
-    }
 }
 
-void parsedoc(char *xmlfile, char *root, char *node, FILE *log, Report *r, void(*xmlfunc)(xmlDocPtr, xmlNodePtr, FILE *, Report *))
+void parsedoc(char *xml_buffer, char *root, char *node, Report *r, void(*xmlfunc)(xmlDocPtr, xmlNodePtr, Report *))
 {
-    //this function parses the xml document 
-    xmlNodePtr cur;
-    xmlDocPtr doc = xmlParseFile(xmlfile);
+    if (xml_buffer == NULL) return;
+    xmlDocPtr doc = xmlReadMemory(xml_buffer, strlen(xml_buffer), "noname.xml", NULL, 0);
+    if (doc == NULL) return;
+    xmlNodePtr cur = xmlDocGetRootElement(doc);
+    if (cur == NULL) { xmlFreeDoc(doc); return; }
 
-    if(doc == NULL)
-    {
-        fprintf(stderr, "Document not parsed successfully\n");
-        xmlFreeDoc(doc);
-        return;
-    }
+    if (xmlStrcmp(cur->name, (const xmlChar *)root)) { xmlFreeDoc(doc); return; }
 
-    cur = xmlDocGetRootElement(doc);
-
-    if (cur == NULL)
-    {
-        fprintf(stderr, "Empty Document\n");
-        xmlFreeDoc(doc);
-        return;
-    }
-    if (!xmlStrcmp(cur->name, (const xmlChar *)root))
-    {
-        if (!xmlStrcmp((const xmlChar *)root, (const xmlChar *)node)) {
-            xmlfunc(doc, cur, log, r);
-        }
-        else{
-            xmlNodePtr child = cur->xmlChildrenNode;
-            while(child != NULL)
-            {
-                if((!xmlStrcmp(child->name, (const xmlChar *)node)))
-                {
-                    xmlfunc(doc, child, log, r);
-                }
-                child = child->next;
+    if (strcmp(root, node) == 0) {
+        xmlfunc(doc, cur, r);
+    } else {
+        cur = cur->children;
+        while (cur != NULL) {
+            if (!xmlStrcmp(cur->name, (const xmlChar *)node)) {
+                xmlfunc(doc, cur, r);
             }
+            cur = cur->next;
         }
-        
     }
     xmlFreeDoc(doc);
 }
 
-void parseActivity(xmlDocPtr doc, xmlNodePtr cur, FILE *log, Report *r)
+void parseActivity(xmlDocPtr doc, xmlNodePtr cur, Report *r)
 {
+    xmlChar *activityName = xmlGetProp(cur, (const xmlChar*)"name");
+    xmlChar *exported = xmlGetProp(cur, (const xmlChar*)"exported");
+    xmlChar *perm = xmlGetProp(cur, (const xmlChar*)"permission");
+    xmlNodePtr intentFilter = cur->children;
+    int hasIntentFilter = 0;
 
-
-    fprintf(log, "\nActivity Checker\n");
-    if((!xmlStrcmp(cur->name, (const xmlChar*)"activity")))
-    {
-
-        xmlChar *export = xmlGetProp(cur, (const xmlChar*)"exported");
-        xmlChar *actName = xmlGetProp(cur, (const xmlChar*)"name");
-        if (export != NULL && actName != NULL && (!xmlStrcmp(export, (const xmlChar*)"true"))){
-            
-            xmlNodePtr activityNode = cur->children;
-            int hasIntentfilter = 0;
-            while (activityNode != NULL) 
-            {
-                //confirms that <ativity> tag has an intent filter
-                if((!xmlStrcmp(activityNode->name, (const xmlChar*)"intent-filter"))){
-                    hasIntentfilter = 1;
-                    xmlNodePtr child = activityNode->xmlChildrenNode;
-                    while(child != NULL)
-                    {
-                        if ((!xmlStrcmp(child->name, (const xmlChar *)"action")) ||
-                            !(xmlStrcmp(child->name, (const xmlChar*)"category")) ){
-                            xmlChar *actionName = xmlGetProp(child, (const xmlChar*)"name");
-                            if(actionName != NULL && (!xmlStrcmp(export, (const xmlChar*)"true")))
-                            {
-                                fprintf(log, "\nActivity: %s\nIntent-filter: yes\
-                                    \nExported: \nPerrmission: None\nRisk Level: Dangerous\n", actionName, export);
-                                fprintf(log, "Reason: Exported activity with intent-filter and no access restriction\n-------\n");
-                                add_finding(r, FINDING_ACTIVITY, (char*)actionName, "Dangerous", "Exported activity with intent-filter and no access restriction", (char*)export, "AndroidManifest.xml", (char*)actName);
-                                xmlFree(actionName);
-                            }
-                            if(actionName != NULL && (!xmlStrcmp(export, (const xmlChar*)"false"))){
-                                fprintf(log, "\nActivity: %s\nIntent-filter: yes\
-                                    \nExported: \nPerrmission: None\nRisk Level: Safe\n", actionName, export);
-                                fprintf(log, "Not exported. Safe\n");
-                                add_finding(r, FINDING_ACTIVITY, (char*)actionName, "Safe", "Not exported", (char*)export, "AndroidManifest.xml", (char*)actName);
-                                xmlFree(actionName);
-                            }
-                        }
-                        child = child->next;
-                    }
-                }
-                activityNode = activityNode->next;
-
-            }
-            if(hasIntentfilter == 0){
-                fprintf(log, "\nActivity: %s\nIntent-filter: No\
-                    \nExported: false\nPermission: None\nRisk Level: Moderate\n", actName);
-                fprintf(log, "Reason: Exported activity without an intent-filter. Can be launched by name. Is this necessary?\n-------\n");
-            }
-            xmlFree(export);
-            xmlFree(actName);
+    while (intentFilter != NULL) {
+        if (!xmlStrcmp(intentFilter->name, (const xmlChar *)"intent-filter")) {
+            hasIntentFilter = 1;
+            break;
         }
-        
+        intentFilter = intentFilter->next;
     }
-    return;
+
+    int is_exported = 0;
+    if (exported != NULL) {
+        if (!xmlStrcmp(exported, (const xmlChar *)"true")) is_exported = 1;
+    } else if (hasIntentFilter) {
+        is_exported = 1;
+    }
+
+    if (is_exported && perm == NULL) {
+        add_finding(r, FINDING_ACTIVITY, (char*)activityName, "HIGH", "Activity is exported but not protected by any permission.", "Exported without permission", "AndroidManifest.xml", (char*)activityName);
+    }
+
+    if (activityName) xmlFree(activityName);
+    if (exported) xmlFree(exported);
+    if (perm) xmlFree(perm);
 }
 
-void parseService(xmlDocPtr doc, xmlNodePtr cur, FILE *log, Report *r)
+void parseService(xmlDocPtr doc, xmlNodePtr cur, Report *r)
 {
+    xmlChar *serviceName = xmlGetProp(cur, (const xmlChar*)"name");
+    xmlChar *exported = xmlGetProp(cur, (const xmlChar*)"exported");
+    xmlChar *permission = xmlGetProp(cur, (const xmlChar*)"permission");
+    
+    int is_exported = (exported && !xmlStrcmp(exported, (const xmlChar*)"true"));
 
-    if ((!xmlStrcmp(cur->name, (const xmlChar*)"service"))){
-        xmlChar *servicename = xmlGetProp(cur, (const xmlChar*)"name");
-        xmlChar *checkExport = xmlGetProp(cur, (const xmlChar*)"exported");
-        xmlChar *checkPermission = xmlGetProp(cur, (const xmlChar*)"permission");
-        fprintf(log, "Service: %s\n", servicename);
-        fprintf(log, "Exported: %s\n", checkExport);
-        xmlChar *reason;
-        xmlNodePtr intent;
-        intent = cur->children;
-        if (checkExport != NULL){
-            if((!xmlStrcmp(checkExport, (const xmlChar*)"true"))){
-               //intent = cur->children;
-                if (checkPermission == NULL)
-                {
-                    fprintf(log, "Permission: %s\n", checkPermission);
-                    reason = "DANGEROUS (Exported Without Permission)\n";
-                    while (intent != NULL)
-                    {
-                        if((!xmlStrcmp(intent->name, (const xmlChar*)"intent-filter")))
-                        {
-                            fprintf(log, "Intent filter: YES\n");
-                            fprintf(log, "Reason: %s\n------\n", reason);
-                            add_finding(r, FINDING_SERVICE, (char*)servicename, "Dangerous", reason, "Exported Without Permission", "AndroidManifest.xml", (char*)servicename);
-                        }
-                        intent = intent->next;
-                    }
-                }
-                else{
-                    fprintf(log, "Permission: %s", checkPermission);
-                    reason = "SAFE (Exported but protected)\n";
-                    while (intent != NULL)
-                    {
-                        if((!xmlStrcmp(intent->name, (const xmlChar*)"intent-filter")))
-                        {
-                            fprintf(log, "Intent filter: YES\n");
-                            fprintf(log, "Reason: %s\n------\n", reason);
-                        }
-                        intent = intent->next;
-                    }
-                }
-            }
-            else{
-                fprintf(log, "Permission: None\n");
-                while(intent != NULL)
-                {
-                    if((!xmlStrcmp(intent->name, (const xmlChar*)"intent-filter")))
-                    {
-                        fprintf(log, "Intent filter: YES\n");
-                        fprintf(log, "Reason: SAFE (Service not exported)\n------\n");
-                    }
-                    else
-                    {
-                        fprintf(log, "Intent filter: NO\n");
-                        fprintf(log, "Reason: SAFE (Service not exported)\n------\n");
-                    }
-                    intent = intent->next;   
-                }
-            }
-        }
-        /**
-         * There is to be a check for when 'exported' is NULL
-         * but, it is for android versions <=12
-         * Let's skip it for now
-         */
-        xmlFree(servicename);
-        xmlFree(checkExport);
-        xmlFree(checkPermission);
+    if (is_exported && permission == NULL) {
+        add_finding(r, FINDING_SERVICE, (char*)serviceName, "HIGH", "Service is exported but not protected by any permission.", "Exported without permission", "AndroidManifest.xml", (char*)serviceName);
     }
+
+    if (serviceName) xmlFree(serviceName);
+    if (exported) xmlFree(exported);
+    if (permission) xmlFree(permission);
 }
 
-typedef struct{
-    /**
-     * this struct contains the name & reasons for 
-     * different the actions in the receiver tag
-     */
-    char *intent;
-    char *intentRisk;
-} actionIntent;
-
-void parseReceiver(xmlDocPtr doc, xmlNodePtr cur, FILE *log, Report *r)
+void parseReceiver(xmlDocPtr doc, xmlNodePtr cur, Report *r)
 {
+    xmlChar *receiverName = xmlGetProp(cur, (const xmlChar*)"name");
+    xmlChar *export = xmlGetProp(cur, (const xmlChar*)"exported");
+    xmlChar *checkPermission = xmlGetProp(cur, (const xmlChar*)"permission");
 
+    int is_exported = (export && !xmlStrcmp(export, (const xmlChar*)"true"));
 
-    actionIntent actIntent[] = {"", "", "android.intent.action.BOOT_COMPLETED", "Risk: malware persistence risk.",
-"android.intent.action.QUICKBOOT_POWERON","same risk as BOOT_COMPLETED",
-"android.provider.Telephony.SMS_RECEIVED","phishing/spam/code execution",
-"android.provider.Telephony.WAP_PUSH_RECEIVED" "malicious links/files",
-"android.intent.action.DATA_SMS_RECEIVED", "hidden triggers",
-"android.intent.action.PACKAGE_ADDED", "install event",
-"android.intent.action.PACKAGE_REMOVED","uninstall event",
-"android.intent.action.PACKAGE_REPLACED","update event",
-"android.net.conn.CONNECTIVITY_CHANGE","forces unwanted behaviour",
-"android.net.wifi.WIFI_STATE_CHANGED","Wi-Fi on/off events",
-"android.net.wifi.SCAN_RESULTS","Wi-Fi scan results",
-"android.intent.action.MEDIA_MOUNTED" "attacker-controlled storage",
-"android.intent.action.NEW_OUTGOING_CALL","Spoof outgoing calls, hijack dialler",
-"android.intent.action.USER_PRESENT","device unlock events",
-"android.intent.action.TIME_TICK","abuse for DoS/battery drain"};
-
-    if((!xmlStrcmp(cur->name, (const xmlChar*)"receiver")))
-    {
-        xmlChar *receiverName = xmlGetProp(cur, (const xmlChar*)"name");
-        xmlChar *export = xmlGetProp(cur, (const xmlChar*)"exported");
-        xmlChar *checkPermission = xmlGetProp(cur, (const xmlChar*)"permission");
-
-        fprintf(log, "Receiver\n");
-        fprintf(log, "Receiver name: %s\n", receiverName);
-        xmlNodePtr intent;
-
-
-        if(export != NULL)
-        {
-            if((!xmlStrcmp(export, (const xmlChar*)"true"))){
-                fprintf(log, "Exported: %s\n", export);
-                intent = cur->children;
-                if (checkPermission == NULL)
-                {
-                    fprintf(log, "Permission: None\n");
-                    while(intent != NULL)
-                    {
-                        if((!xmlStrcmp(intent->name, (const xmlChar*)"intent-filter"))){
-                            fprintf(log, "Intent-filter: Yes\n");
-                            xmlNodePtr action = intent->children;
-                            xmlChar *actionName = xmlGetProp(action, (const xmlChar*)"name");
-                            while(action != NULL){
-                                if ((!xmlStrcmp(action->name, (const xmlChar*)"name"))){
-                                    for(int i = 1; i < sizeof(actIntent); i++){
-                                        fprintf(log, "%s\nRisk: %s\n", actIntent->intent, actIntent->intentRisk);
-                                        fprintf(log, "------");
-                                    }
-                                }
-                                action = action->next;
-                            }
-                            if (actionName) xmlFree(actionName);
-                        }
-                        intent = intent->next;
-                    }
-
-                }
-                else{
-                    fprintf(log, "Permission: %s\n", checkPermission);
-                    fprintf(log, "Risk: Moderate - only apps signed with the same key (or granted this permission explicitly) can send the broadcast\n");
-                }
-            }
-            else{
-                 fprintf(log, "Exported: %s", export);
-                 fprintf(log, "Risk-level: Low - It's safe because only the app can send broadcasts internally.\n");
-                 fprintf(log, "------");
-            }
-        }
-        if(receiverName) xmlFree(receiverName);
-        if(export) xmlFree(export);
-        if(checkPermission) xmlFree(checkPermission);
+    if (is_exported && checkPermission == NULL) {
+        add_finding(r, FINDING_RECEIVER, (char*)receiverName, "HIGH", "Broadcast Receiver is exported but not protected by any permission.", "Exported without permission", "AndroidManifest.xml", (char*)receiverName);
     }
-    // fclose(log); // Removed fclose
+
+    if (receiverName) xmlFree(receiverName);
+    if (export) xmlFree(export);
+    if (checkPermission) xmlFree(checkPermission);
 }
 
-void parseProvider(xmlDocPtr doc, xmlNodePtr cur, FILE *log, Report *r)
+void parseProvider(xmlDocPtr doc, xmlNodePtr cur, Report *r)
 {
-    if ((!xmlStrcmp(cur->name, (const xmlChar*)"provider"))){
-        xmlChar *providerName = xmlGetProp(cur, (const xmlChar*)"name");
-        xmlChar *exported = xmlGetProp(cur, (const xmlChar*)"exported");
-        xmlChar *readPermission = xmlGetProp(cur, (const xmlChar*)"readPermission");
-        xmlChar *writePermission = xmlGetProp(cur, (const xmlChar*)"writePermission");
-        xmlChar *grantUri = xmlGetProp(cur, (const xmlChar*)"grantUriPermissions");
-        xmlChar *authorities = xmlGetProp(cur, (const xmlChar*)"authorities");
-        xmlNodePtr grantPermission = cur->children;
+    xmlChar *providerName = xmlGetProp(cur, (const xmlChar*)"name");
+    xmlChar *exported = xmlGetProp(cur, (const xmlChar*)"exported");
+    xmlChar *readPermission = xmlGetProp(cur, (const xmlChar*)"readPermission");
+    xmlChar *writePermission = xmlGetProp(cur, (const xmlChar*)"writePermission");
+    xmlChar *grantUri = xmlGetProp(cur, (const xmlChar*)"grantUriPermissions");
 
-        if(exported != NULL)
-        {
-            if((!xmlStrcmp(exported, (const xmlChar *)"true"))){
-                fprintf(log, "Provider name: %s\n", providerName);
-                if(readPermission == NULL && writePermission != NULL){
-                    fprintf(log, "Read Permission: None\n");
-                    fprintf(log, "Write Permission: None\n");
-                }
-                else{
-                    fprintf(log, "Read Permission: %s\n", readPermission);
-                    fprintf(log, "Write Permission: %s\n", writePermission);
-                }
-                if(grantUri != NULL){
-                    if ((!xmlStrcmp(grantUri, (const xmlChar*)"true"))){
-                        fprintf(log, "Grant URI Permission: %s.\n", grantUri);
-                        while (grantPermission != NULL){
-                            if((!xmlStrcmp(grantPermission->name, (const xmlChar*)"path-permission"))){
-                                fprintf(log, "HIGH:'grantUripermissions' used without path restrictions\n");
-                            }
-                            else{
-                                fprintf(log, "OK:'grantUripermissions' restricted with path permission\n");
-                            }
-                        }
-                    }
-                }
-                if(authorities != NULL){
-                    fprintf(log, "Authorities: %s\n", authorities);
-                }
-                    
-            }
-            else{
-                fprintf(log, "Provider name: %s\n", providerName);
-                fprintf(log, "Exported: %s\n", exported);
-                fprintf(log, "SAFE: Provider not exported\n------\n");
-            }
+    int is_exported = (exported && !xmlStrcmp(exported, (const xmlChar*)"true"));
+
+    if (is_exported) {
+        if (readPermission == NULL || writePermission == NULL) {
+             add_finding(r, FINDING_PROVIDER, (char*)providerName, "HIGH", "Content Provider is exported but lacks read or write permissions.", "Exported with missing permissions", "AndroidManifest.xml", (char*)providerName);
         }
-        if(providerName) xmlFree(providerName);
-        if(exported) xmlFree(exported);
-        if(readPermission) xmlFree(readPermission);
-        if(writePermission) xmlFree(writePermission);
-        if(grantUri) xmlFree(grantUri);
-        if(authorities) xmlFree(authorities);
+        if (grantUri && !xmlStrcmp(grantUri, (const xmlChar*)"true")) {
+             add_finding(r, FINDING_PROVIDER, (char*)providerName, "MEDIUM", "Content Provider allows URI permission granting, which can be risky.", "grantUriPermissions=true", "AndroidManifest.xml", (char*)providerName);
+        }
     }
-    // fclose(log); // Removed fclose
+
+    if (providerName) xmlFree(providerName);
+    if (exported) xmlFree(exported);
+    if (readPermission) xmlFree(readPermission);
+    if (writePermission) xmlFree(writePermission);
+    if (grantUri) xmlFree(grantUri);
 }
 
-void parsePermission(xmlDocPtr doc, xmlNodePtr cur, FILE *log, Report *r){
-        if(!xmlStrcmp(cur->name, (const xmlChar*)"uses-permission")){
-            xmlChar* permission = xmlGetProp(cur, (const xmlChar*)"name");
-            if(permission != NULL){
-                for(int i = 0; i < NUM_PERMISSIONS; i++){
-                    if(strcmp(rperms[i].name, permission) == 0){
-                        fprintf(log, "Permission: %s%s", permission, rperms[i].level);
-                        // Assuming rperms[i].level contains newline chars and formatting, we might want to clean it up for JSON
-                        // keeping it simple for now
-                        add_finding(r, FINDING_PERMISSION, (char*)permission, rperms[i].level, "Requested in Manifest", "", "AndroidManifest.xml", (char*)permission);
-                    }
-                }
+void parsePermission(xmlDocPtr doc, xmlNodePtr cur, Report *r){
+    xmlChar* permission = xmlGetProp(cur, (const xmlChar*)"name");
+    if (permission != NULL) {
+        for (int i = 0; i < NUM_PERMISSIONS; i++) {
+            if (strcmp(rperms[i].name, (char*)permission) == 0) {
+                add_finding(r, FINDING_PERMISSION, (char*)permission, rperms[i].level, "Requested in Manifest", "", "AndroidManifest.xml", (char*)permission);
             }
-            if(permission) xmlFree(permission);
         }
+    }
+    if (permission) xmlFree(permission);
 }
 
-int analyse_per(char *file, Report *r)
+int analyse_per(char *xml_buffer, Report *r)
 {
-    char perm[PATH_MAX];
-    FILE *AndroidManifest;
+    if (xml_buffer == NULL) return EXIT_FAILURE;
 
-     
-    if ((AndroidManifest = fopen(file, "r")) == NULL)
-    {
-        perror("AndroidManifest.xml");
-        return EXIT_FAILURE;
-    }
+    parsedoc(xml_buffer, "manifest", "manifest", r, parsetag_permissions); 
+    parsedoc(xml_buffer, "manifest", "application", r, parsetag_components);
 
-    FILE *log = fopen("manifestLog.txt", "w+");
-    if (!log) {
-        perror("Failed to open manifestLog.txt");
-        fclose(AndroidManifest);
-        return EXIT_FAILURE;
-    }
-
-    parsedoc(file, "manifest", "manifest", log, r, parsetag_permissions); 
-    parsedoc(file, "manifest", "application", log, r, parsetag_components);
-    parsedoc("permission.xml", "root", "uses-permission", log, r, parsePermission);
-    parsedoc("activity.xml", "root", "activity", log, r, parseActivity);
-    parsedoc("services.xml", "root", "service", log, r, parseService);
-    parsedoc("receiver.xml", "root", "receiver", log, r, parseReceiver);
-    parsedoc("providers.xml", "root", "provider", log, r, parseProvider);
-
-    fclose(log);
-    fclose(AndroidManifest);
+    free(xml_buffer);
     return 0;
 }

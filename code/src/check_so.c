@@ -1,37 +1,37 @@
 #include "main.h"
 
-
-int sofile(const char *path, const struct stat *sb, int typeflag, struct FTW *ftbuf);
-
-int filecheckso(char *file_path)
+int filecheckso(char *file_path, Report *r)
 {
-    if (nftw(file_path, sofile, 5, FTW_PHYS) == -1)
-    {
-        perror("nftw");
-        return EXIT_FAILURE;
+   zip_t *apk_file;
+    apk_file = zip_open(file_path, 0, NULL);
+    if(apk_file == NULL){
+        return -1;
     }
-}
-int sofile(const char *path, const struct stat *sb, int typeflag, struct FTW *ftbuf)
-{
-
-    if(typeflag == FTW_F)
-    {
-        char base_path[PATH_MAX];
-        snprintf(base_path, PATH_MAX-1, "%s", path);
-    
-        if (fnmatch("*.so", basename(base_path), 0) == 0)
-        {
-            if (sb->st_mode & 0740)// check this with the access function instead
-            {
-               isoFunc(base_path);
-            }
-            else
-            {
-                perror("Permission Denied");
-                return EXIT_FAILURE;
-            }
-        }
+    int num_entries = zip_get_num_entries(apk_file, 0);
+    for(int i = 0; i < num_entries; i++){            
+            
+            zip_stat_t zstat;
+            
+            if (fnmatch("*.so", zip_get_name(apk_file, i, 0), 0) == 0){
+                if(zip_stat_index(apk_file, i, 0, &zstat) == -1){
+                    return -1;
+                }
+                zip_file_t *file;
+                if((file = zip_fopen_index(apk_file, i, 0)) == NULL){
+                    return -1;
+                }
+                char *buf = malloc(zstat.size);
+                if(zip_fread(file, buf, zstat.size) == -1){
+                    free(buf);
+                    zip_fclose(file);
+                    return -1;
+                }
+                zip_fclose(file);
+                isoFunc(buf, zstat.size, zip_get_name(apk_file, i, 0), r);
+                free(buf);
+            }            
+            
     }
-    return 0; 
+    zip_close(apk_file);
+    return 0;
 }
-

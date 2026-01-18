@@ -28,24 +28,26 @@ typedef struct keepinmemory {
 } keepMemory;
 keepMemory dataInMemory;
 void dexPrint(char *str, uint32_t value, FILE *log);
-void dexheaderScan(char *dex, FILE*);
-void dexstringData(char *dex, FILE*);
+void dexheaderScan(FILE *file, FILE *dexLog);
+void dexstringData(FILE *file, FILE *dexLog);
 char* readDexString(FILE *file);
 uint32_t readULEB128(FILE *file);
-void typeIdTable(char *dex, FILE*);
-void methodIdTable(char *, FILE*, uint32_t *, char **);
-void fieldIdTable(char *, FILE*,uint32_t *, char **);
-void classDefTable(char *, FILE*,uint32_t *, char **);
-void class_data_item(char *, FILE*,uint32_t *, uint32_t );
-void code_item(char *dex, FILE *dexLog, method , method, uint32_t size);
-int logdex(char *);
+void typeIdTable(FILE *file, FILE *dexLog);
+void methodIdTable(FILE *file, FILE *dexLog, uint32_t *type_index, char **string_data_array);
+void fieldIdTable(FILE *file, FILE *dexLog,uint32_t *type_string_index, char **string_data_array);
+void classDefTable(FILE *file, FILE *dexLog,uint32_t *class_index, char **string_data_array);
+void class_data_item(FILE *file, FILE *dexLog,uint32_t *class_data_off, uint32_t class_defs_size);
+void code_item(FILE *file, FILE *dexLog, method , method, uint32_t size);
+int logdex(char *dex_buf, size_t dex_size);
 
 void freeKeepMemory(keepMemory mem);
 
-int dexScan(char *dex, Report *report)
+int dexScan(char *dex, size_t size, int enable_dex_log, Report *report)
 {
 
-    logdex(dex);
+    if (enable_dex_log) {
+        logdex(dex, size);
+    }
     analyseDex(
         dataInMemory.strings, dataInMemory.strings_count,
         dataInMemory.type_descriptors, dataInMemory.type_descriptors_count,
@@ -54,7 +56,7 @@ int dexScan(char *dex, Report *report)
         dataInMemory.method_class, dataInMemory.method_class_count,
         dataInMemory.super_idx, dataInMemory.super_idx_count,
         report,
-        dex
+        "classes.dex" // Using a dummy name for reporting since it's in-memory
     );
     freeKeepMemory(dataInMemory);
     
@@ -84,14 +86,11 @@ void dexPrint(char *str, uint32_t value, FILE *log){
     free(buffer);
 }
 
-void dexheaderScan(char *dex, FILE *dexLog){
+void dexheaderScan(FILE *file, FILE *dexLog){
 
-    FILE *file;
     bool safe_dex = true;
     
-    if((file = fopen(dex, "rb")) == NULL){
-        fprintf(stderr, "Unable to read *.dex file\n");
-    }
+    fseek(file, 0, SEEK_SET); // Ensure we are at the start
 
     fprintf(dexLog, "[Dex_Log]\n-----\n");
 
@@ -182,17 +181,9 @@ void dexheaderScan(char *dex, FILE *dexLog){
 
     }
     fprintf(dexLog, "------\n\n");
-    fclose(file);
  }
 
-void dexstringData(char *dex, FILE *dexLog){
-
-    FILE *file;
-
-    if((file = fopen(dex, "rb"))== NULL){
-        fprintf(stderr, "Unable to read *.dex file\n");
-    }
-
+void dexstringData(FILE *file, FILE *dexLog){
     uint32_t string_size, string_id_off;
     fseek(file, 0x38, SEEK_SET);
     fread(&string_size, 4, 1, file);
@@ -228,9 +219,6 @@ void dexstringData(char *dex, FILE *dexLog){
         }
     }
     free(current_string_offset);
-
-    cleanup:
-        fclose(file);
 }
 char* readDexString(FILE *file){
     size_t count = 0;
@@ -264,12 +252,7 @@ uint32_t readULEB128(FILE *file){
     return result;
 }
 
-void typeIdTable(char *dex, FILE *dexLog){
-    FILE *file;
-
-    if((file = fopen(dex, "rb"))== NULL){
-        fprintf(stderr, "Unable to read *.dex file\n");
-    }
+void typeIdTable(FILE *file, FILE *dexLog){
 
     uint32_t string_size, string_id_off;
     fseek(file, 0x38, SEEK_SET);
@@ -330,9 +313,9 @@ void typeIdTable(char *dex, FILE *dexLog){
         dataInMemory.type_descriptors[i] = string_data_array[string_index[i]];
         fprintf(dexLog, "[TYPE] index=%d, decriptor=%s\n", string_index[i], dataInMemory.type_descriptors[i]);
     }
-    methodIdTable(dex, dexLog, string_index, dataInMemory.strings);
-    fieldIdTable(dex, dexLog, string_index, dataInMemory.strings);
-    classDefTable(dex, dexLog, string_index, dataInMemory.strings);
+    methodIdTable(file, dexLog, string_index, dataInMemory.strings);
+    fieldIdTable(file, dexLog, string_index, dataInMemory.strings);
+    classDefTable(file, dexLog, string_index, dataInMemory.strings);
  
     cleanup:
         free(string_index);
@@ -340,18 +323,9 @@ void typeIdTable(char *dex, FILE *dexLog){
             if (string_data_array[a])free(string_data_array[a]);
         }
         free(string_data_array);
-        fclose(file);
 }
 
-void methodIdTable(char *dex, FILE*dexLog, uint32_t *type_index, char **string_data_array){
-
-    FILE *file;
-
-    if((file = fopen(dex, "rb"))== NULL){
-        fprintf(stderr, "Unable to read *.dex file\n");
-        fclose(dexLog);
-        return;
-    }
+void methodIdTable(FILE *file, FILE*dexLog, uint32_t *type_index, char **string_data_array){
 
     uint32_t method_ids_off, method_ids_size;
 
@@ -400,17 +374,9 @@ void methodIdTable(char *dex, FILE*dexLog, uint32_t *type_index, char **string_d
         free(class_idx);
         free(name_idx);
         free(proto_idx);
-        fclose(file);
 }
 
-void fieldIdTable(char *dex, FILE*dexLog,uint32_t *type_string_index, char **string_data_array){
-    FILE *file;
-
-    if((file = fopen(dex, "rb"))== NULL){
-        fprintf(stderr, "Unable to read *.dex file\n");
-        fclose(dexLog);
-        return;
-    }
+void fieldIdTable(FILE *file, FILE*dexLog,uint32_t *type_string_index, char **string_data_array){
     //0x50 - size and 0x54 - off
     uint32_t field_ids_size, field_ids_off;
 
@@ -460,16 +426,8 @@ void fieldIdTable(char *dex, FILE*dexLog,uint32_t *type_string_index, char **str
         free(name_idx);
         free(class_index);
         free(type_index);
-        fclose(file);
 }
-void classDefTable(char *dex, FILE*dexLog,uint32_t *class_index, char **string_data_array){
-    FILE *file;
-
-    if((file = fopen(dex, "rb"))== NULL){
-        fprintf(stderr, "Unable to read *.dex file\n");
-        fclose(dexLog);
-        return;
-    }
+void classDefTable(FILE *file, FILE*dexLog,uint32_t *class_index, char **string_data_array){
 
     uint32_t class_defs_off, class_defs_size;
     // class offset 60 and class size 64
@@ -521,13 +479,12 @@ void classDefTable(char *dex, FILE*dexLog,uint32_t *class_index, char **string_d
         fprintf(dexLog, "[CLASS] name: %s, ", dataInMemory.class_definitions[j]);
         fprintf(dexLog, "flags: %u, \n", access_flags[j]);
     }
-    class_data_item(dex, dexLog, class_data_off, class_defs_size);
+    class_data_item(file, dexLog, class_data_off, class_defs_size);
 
     cleanup:
         free(superclass_idx);
         free(access_flags);
         free(class_data_off);
-        fclose(file);
 }
 
 // Helper to process a single code item
@@ -556,15 +513,7 @@ void process_code_item(FILE *file, FILE *dexLog, uint32_t code_off, uint32_t met
     fseek(file, current_pos, SEEK_SET); // Restore position
 }
 
-void class_data_item(char *dex, FILE*dexLog, uint32_t *class_data_off, uint32_t class_defs_size){
-    FILE *file;
-
-    if((file = fopen(dex, "rb"))== NULL){
-        fprintf(stderr, "Unable to read *.dex file\n");
-        fclose(dexLog);
-        return;
-    }
-
+void class_data_item(FILE *file, FILE*dexLog, uint32_t *class_data_off, uint32_t class_defs_size){
     for(uint32_t i = 0; i < class_defs_size; i++){
         if (class_data_off[i] == 0) continue;
 
@@ -612,25 +561,33 @@ void class_data_item(char *dex, FILE*dexLog, uint32_t *class_data_off, uint32_t 
         }
     }
     
-    fclose(file);
 }
 
-void code_item(char *dex, FILE *dexLog, method direct , method virtual, uint32_t size){ 
+void code_item(FILE *file, FILE *dexLog, method direct , method virtual, uint32_t size){ 
     // Legacy function kept for signature compatibility if needed, 
     // but functionality moved to process_code_item and class_data_item.
     // The previous implementation was flawed (batch processing with incorrect sizes).
 }
 
-int logdex(char *dex){
-    FILE *dexLog = fopen("dexLog_" __TIME__"_" __DATE__".txt", "a+");
+int logdex(char *dex_buf, size_t dex_size){
+    FILE *dexLog = fopen("dexLog.txt", "a+"); // Simplified name to avoid time/date issues in in-memory mode
     if(dexLog == NULL){
         perror("logdex: fopen");
         return EXIT_FAILURE;
     }
 
-    dexheaderScan(dex, dexLog);
-    dexstringData(dex, dexLog);
-    typeIdTable(dex, dexLog);
+    FILE *file = fmemopen(dex_buf, dex_size, "rb");
+    if (file == NULL) {
+        perror("fmemopen");
+        fclose(dexLog);
+        return EXIT_FAILURE;
+    }
+
+    dexheaderScan(file, dexLog);
+    dexstringData(file, dexLog);
+    typeIdTable(file, dexLog);
+    
+    fclose(file);
     fclose(dexLog);
     return(EXIT_SUCCESS);
 }

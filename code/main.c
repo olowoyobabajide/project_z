@@ -6,11 +6,12 @@ int main(int argc, char **argv)
 {
     char *json_output_file = NULL;
     char *input_path = NULL;
+    int enable_dex_log = 0;
 
     if(argc < 2)
     {
         printf("Insufficient input\n");
-        printf("Usage: ./fs_analyzer <path> [-o json <report_file.json>]\n");
+        printf("Usage: ./fs_analyzer <path> [-d] [-o json <report_file.json>]\n");
         return EXIT_FAILURE;
     }
 
@@ -28,6 +29,8 @@ int main(int argc, char **argv)
                 fprintf(stderr, "Usage: -o json <filename>\n");
                 return EXIT_FAILURE;
             }
+        } else if (strcmp(argv[i], "-d") == 0) {
+            enable_dex_log = 1;
         } else if (input_path == NULL) {
             input_path = argv[i];
         } else {
@@ -47,31 +50,21 @@ int main(int argc, char **argv)
         report = init_report();
     }
 
-    // Clear old log file
     // Clear old log files
     remove("manifestLog.txt");
     remove("dex_analysis.txt");
 
     printf("Input path: %s\n", buffer);
-    apk_check(buffer);
 
-    char buf_path[PATH_MAX];
-    size_t len = strlen(buffer);
-    if (len > 0 && buffer[len - 1] == '/') {
-        snprintf(buf_path, sizeof(buf_path), "%stemp", buffer);
-    } else {
-        snprintf(buf_path, sizeof(buf_path), "%s/temp", buffer);
-    }
-
-    filecheckManifest(buf_path, report); // For Android Manifest
+    filecheckManifest(buffer, report); // For Android Manifest
     init_elf_stats();
     
-    filecheckDex(buf_path, report); // For .dex files 
-    filecheckso(buf_path); // Report passed via global finalizer
+    filecheckDex(buffer, enable_dex_log, report); // For .dex files 
+    filecheckso(buffer, report); // Report passed via global finalizer
     
     report_elf_stats(report);
 
-    filecheckAll(buf_path, report); // for checking all files
+    filecheckAll(buffer, report); // for checking all files
     
     if (report && json_output_file) {
         save_report_json(report, json_output_file);
@@ -79,6 +72,5 @@ int main(int argc, char **argv)
         free_report(report);
     }
     
-    cleanup(buffer);
 
 }

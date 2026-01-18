@@ -1,41 +1,45 @@
 #include "main.h"
 
-static Report *current_report = NULL;
-int nfile(const char *path, const struct stat *sb, int typeflag, struct FTW *ftbuf);
-
 int filecheckAll(char *file_path, Report *r)
 {
-    current_report = r;
-    if (nftw(file_path, nfile, 5, FTW_PHYS) == -1)
-    {
-        perror("nftw");
-        return EXIT_FAILURE;
+    zip_t *apk_file;
+    apk_file = zip_open(file_path, 0, NULL);
+    if(apk_file == NULL){
+        return -1;
     }
-    current_report = NULL;
-}
-int nfile(const char *path, const struct stat *sb, int typeflag, struct FTW *ftbuf)
-{
-
-    if(typeflag == FTW_F)
-    {
-        char base_path[PATH_MAX];
-        snprintf(base_path, PATH_MAX, "%s", path);
-    
-        if (fnmatch("*", basename(base_path), 0) == 0)
-        {
-            if (sb->st_mode & 0740)// check this with the access function instead
-            {
-                verifyHash(base_path, current_report);
-                suid(base_path, current_report);
-                hidden_file(base_path, current_report);
+    int num_entries = zip_get_num_entries(apk_file, 0);
+    for(int i = 0; i < num_entries; i++){            
+            zip_stat_t zstat;
+            const char *name = zip_get_name(apk_file, i, 0);
+            if (name != NULL){
+                if(zip_stat_index(apk_file, i, 0, &zstat) == -1){
+                    continue;
+                }
                 
-            }
-            else
-            {
-                perror("Permission Denied");
-                return EXIT_FAILURE;
-            }
-        }
+                zip_uint8_t opsys;
+                zip_uint32_t attributes;
+                zip_file_get_external_attributes(apk_file, (zip_uint64_t)i, 0, &opsys, &attributes);
+                uint32_t mode = (attributes >> 16);
+
+                zip_file_t *file;
+                if((file = zip_fopen_index(apk_file, (zip_uint64_t)i, 0)) == NULL){
+                    continue;
+                }
+                unsigned char *buf = malloc(zstat.size);
+                if(zip_fread(file, buf, zstat.size) == -1){
+                    free(buf);
+                    zip_fclose(file);
+                    continue;
+                }
+                zip_fclose(file);
+                
+                verifyHashMemory(buf, zstat.size, (char*)name, r);
+                suidMemory(buf, zstat.size, mode, (char*)name, r);
+                hidden_fileMemory((char*)name, r);
+                
+                free(buf);
+            }            
     }
-    return 0; 
+    zip_close(apk_file);
+    return 0;
 }

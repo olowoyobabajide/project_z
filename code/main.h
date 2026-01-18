@@ -10,6 +10,7 @@
 #include <ctype.h>
 #include <ftw.h>
 #include <fnmatch.h>
+#include "src/dep/zip.h"
 #include <libgen.h>
 #include <sys/wait.h>
 #include <stdbool.h>

@@ -24,7 +24,6 @@ typedef struct {
  *
  * This array serves as a central repository for all the threats the scanner
  * looks for. The final entry is a "sentinel" with NULL members to mark
-
  * the end of the array, allowing for safe iteration.
  */
 SecurityRuleInfo rule_info_database[] = {
@@ -113,8 +112,6 @@ SecurityRuleInfo rule_info_database[] = {
     { .category = NULL, .description = NULL }
 };
 
-
-
 void analyseDex(
     char **str, int str_count,
     char **typ, int typ_count,
@@ -124,16 +121,7 @@ void analyseDex(
     char **super_class, int super_class_count,
     Report *report,
     const char *filename
-    /*uint16_t *code_byte,
-    uint32_t code_byte_count*/
 ){
-
-    FILE *log;
-    if((log = fopen("dex_analysis.txt", "a")) == NULL){
-        fprintf(stderr, "Could not open dex_analysis.txt\n");
-        return;
-    }
-    
     // Evidence strings (NULL means not found)
     char *evidence_accessibility = NULL;
     char *evidence_broadcast_boot = NULL;
@@ -213,85 +201,66 @@ void analyseDex(
     // 4. Scan Methods
     for(uint32_t i = 0; i < meth_class_count; i++){
         if(meth_class[i] && method[i]){
-            if(strstr(meth_class[i], "Ljava/lang/Runtime;") && strstr(method[i], "exec")) evidence_runtime_exec = method[i]; // or combine class+method
+            if(strstr(meth_class[i], "Ljava/lang/Runtime;") && strstr(method[i], "exec")) evidence_runtime_exec = method[i];
             if(strstr(meth_class[i], "addJavascriptInterface")) evidence_js_interface = meth_class[i];
             if((strstr(meth_class[i], "Ljava/lang/System;") || strstr(meth_class[i], "Ljava/lang/Runtime;")) && 
-               (strstr(method[i], "loadLibrary") || strstr(method[i], "load"))) evidence_dex_loader = method[i]; // Reusing dex loader category logic or dynamic code?
-               // Actually dynamic code execution rule #3 uses "Dynamic Code Execution" desc.
+               (strstr(method[i], "loadLibrary") || strstr(method[i], "load"))) evidence_dex_loader = method[i];
         }
     }
-
 
     // Logic Combinations
     if(ev_broadcast_receiver && ev_boot_completed) evidence_broadcast_boot = ev_boot_completed;
     if(ev_broadcast_receiver && ev_sms_send) evidence_sms_manager = ev_sms_send;
-    if(ev_cipher && ev_file_io && ev_window_manager) evidence_crypto_file = ev_cipher; // Ransomware heuristic
+    if(ev_cipher && ev_file_io && ev_window_manager) evidence_crypto_file = ev_cipher;
     if(ev_log_util && ev_sensitive_string) evidence_log_secrets = ev_sensitive_string;
     if(ev_http_socket && ev_media_hardware) evidence_camera_mic_socket = ev_media_hardware;
     if(ev_reflection && ev_exec_cmd) evidence_reflection_exec = ev_exec_cmd;
 
     // Logging Findings
     if(evidence_accessibility) {
-        fprintf(log, "%s, %s\n", rule_info_database[0].category, rule_info_database[0].description);
         add_finding(report, FINDING_DEX, rule_info_database[0].category, "CRITICAL", rule_info_database[0].description, "", filename, evidence_accessibility);
     }
     if(evidence_broadcast_boot) {
-        fprintf(log, "%s, %s\n", rule_info_database[1].category, rule_info_database[1].description);
         add_finding(report, FINDING_DEX, rule_info_database[1].category, "CRITICAL", rule_info_database[1].description, "", filename, evidence_broadcast_boot);
     }
     if(evidence_notification_listener) {
-        fprintf(log, "%s, %s\n", rule_info_database[2].category, rule_info_database[2].description);
         add_finding(report, FINDING_DEX, rule_info_database[2].category, "CRITICAL", rule_info_database[2].description, "", filename, evidence_notification_listener);
     }
     if(evidence_dex_loader) {
-        fprintf(log, "%s, %s\n", rule_info_database[3].category, rule_info_database[3].description);
         add_finding(report, FINDING_DEX, rule_info_database[3].category, "CRITICAL", rule_info_database[3].description, "", filename, evidence_dex_loader);
     }
     if(evidence_crypto_file) {
-        fprintf(log, "%s, %s\n", rule_info_database[4].category, rule_info_database[4].description);
         add_finding(report, FINDING_DEX, rule_info_database[4].category, "HIGH", rule_info_database[4].description, "", filename, evidence_crypto_file);
     }
     if(evidence_camera_mic_socket) {
-        fprintf(log, "%s, %s\n", rule_info_database[5].category, rule_info_database[5].description);
         add_finding(report, FINDING_DEX, rule_info_database[5].category, "HIGH", rule_info_database[5].description, "", filename, evidence_camera_mic_socket);
     }
     if(evidence_reflection_exec) {
-        fprintf(log, "%s, %s\n", rule_info_database[6].category, rule_info_database[6].description);
         add_finding(report, FINDING_DEX, rule_info_database[6].category, "HIGH", rule_info_database[6].description, "", filename, evidence_reflection_exec);
     }
     if(evidence_emulator_check) {
-        fprintf(log, "%s, %s\n", rule_info_database[7].category, rule_info_database[7].description);
         add_finding(report, FINDING_DEX, rule_info_database[7].category, "HIGH", rule_info_database[7].description, "", filename, evidence_emulator_check);
     }
     if(evidence_runtime_exec) {
-        fprintf(log, "%s, %s\n", rule_info_database[8].category, rule_info_database[8].description);
         add_finding(report, FINDING_DEX, rule_info_database[8].category, "HIGH", rule_info_database[8].description, "", filename, evidence_runtime_exec);
     }
     
     if(evidence_usage_stats) {
-        fprintf(log, "%s, %s\n", rule_info_database[10].category, rule_info_database[10].description);
         add_finding(report, FINDING_DEX, rule_info_database[10].category, "MEDIUM", rule_info_database[10].description, "", filename, evidence_usage_stats);
     }
     if(evidence_clipboard) {
-        fprintf(log, "%s, %s\n", rule_info_database[11].category, rule_info_database[11].description);
         add_finding(report, FINDING_DEX, rule_info_database[11].category, "MEDIUM", rule_info_database[11].description, "", filename, evidence_clipboard);
     }
     if(evidence_log_secrets) {
-        fprintf(log, "%s, %s\n", rule_info_database[12].category, rule_info_database[12].description);
         add_finding(report, FINDING_DEX, rule_info_database[12].category, "MEDIUM", rule_info_database[12].description, "", filename, evidence_log_secrets);
     }
     if(evidence_js_interface) {
-        fprintf(log, "%s, %s\n", rule_info_database[13].category, rule_info_database[13].description);
         add_finding(report, FINDING_DEX, rule_info_database[13].category, "MEDIUM", rule_info_database[13].description, "", filename, evidence_js_interface);
     }
     if(evidence_sms_manager) {
-        fprintf(log, "%s %s\n", rule_info_database[14].category, rule_info_database[14].description);
         add_finding(report, FINDING_DEX, rule_info_database[14].category, "MEDIUM", rule_info_database[14].description, "", filename, evidence_sms_manager);
     }
     if(evidence_root) {
-        fprintf(log, "%s, %s\n", rule_info_database[15].category, rule_info_database[15].description);
         add_finding(report, FINDING_DEX, rule_info_database[15].category, "MEDIUM", rule_info_database[15].description, "", filename, evidence_root);
     }
-    
-    fclose(log);
 }

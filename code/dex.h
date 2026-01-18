@@ -2,6 +2,6 @@
 #define DEX_H
 
 #include "report.h"
-int dexScan(char *dex, Report *report);
+int dexScan(char *dex, size_t size, int enable_dex_log, Report *report);
 
 #endif // DEX_H
