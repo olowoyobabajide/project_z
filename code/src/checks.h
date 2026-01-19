@@ -8,6 +8,5 @@ int filecheckso(char *file_path, Report *r);
 int apk_check(char *apk);
 int filecheckManifest(char *file_path, Report *r);
 int filecheckAll(char *file_path, Report *r);
-int cleanup(char *file_path);
 
 #endif // CHECKS_H

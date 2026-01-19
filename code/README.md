@@ -37,7 +37,7 @@ gcc -I. -Isrc -Isrc/dep *.c src/*.c src/dep/*.c -o fs_analyzer $(pkg-config --cf
 ```
 
 ## Usage
-Run the analyzer by providing the path to the extracted APK directory or file system location:
+Run the analyzer by providing the path to the source APK file:
 
 ```bash
 ./fs_analyzer <path_to_apk> [-d] [-o json <report_file.json>]
@@ -49,12 +49,11 @@ Run the analyzer by providing the path to the extracted APK directory or file sy
 
 ### Example
 ```bash
-./fs_analyzer ./temp -o json report.json
+./fs_analyzer /path/to/apk/JohnDoe.apk -o json report.json
 ```
 
 ## Troubleshooting & Potential Errors
 - **Missing libxml-2.0**: If you get an error like `libxml/parser.h: No such file or directory`, ensure `libxml2-dev` is installed and that `pkg-config` is correctly finding the flags.
 - **OpenSSL Linkage**: Ensure `-lssl -lcrypto` are at the end of your `gcc` command to resolve cryptographic functions.
-- **Permission Denied**: Some operations (like scanning certain directories) might require read permissions. If analyzing system files, you may need `sudo`.
 
 
