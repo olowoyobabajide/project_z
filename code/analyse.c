@@ -1,6 +1,6 @@
 #include "main.h"
-#include "src/dep/libxml/parser.h" 
-#include "src/dep/libxml/tree.h"
+#include <libxml/parser.h>
+#include <libxml/tree.h>
 #include "report.h"
 
 void parsetag_permissions(xmlDocPtr doc, xmlNodePtr cur, Report *r);

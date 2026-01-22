@@ -1,5 +1,5 @@
 #include "main.h"
-#include "dep/AxmlParser.h"
+#include "src/dep/AxmlParser.h"
 
 char* axmldec(char *buffer, size_t size) {
     char *outbuf;

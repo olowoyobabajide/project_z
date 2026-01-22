@@ -20,6 +20,7 @@ The project uses the following libraries:
 - **libxml2**: Used for parsing Android XML manifests.
 - **OpenSSL**: Used for hash calculations. Most Linux distributions include this by default, but you may need the development headers (`libssl-dev`).
 - **libzip**: Used for high-performance ZIP archive handling. The core source is included in `src/dep`, but the library itself must be installed on the system to link correctly (e.g., `libzip-dev`).
+- **pkg-config**: Used to retrieve valid compilation and linker flags for dependencies.
 
 ### Installing Dependencies (Optional/If Missing)
 If your system lacks the necessary headers or libraries, you can install them via your package manager:
@@ -46,6 +47,8 @@ Run the analyzer by providing the path to the source APK file:
 ### Flags
 - `-o json <filename>`: (Required for structured output) Saves all findings to a JSON file.
 - `-d`: Enables detailed, legacy-style DEX logging to `dexLog.txt` for debugging purposes.
+- `-h`, `--help`: Displays the help message and usage instructions.
+- `-v`, `--version`: Displays the current version of the tool.
 
 ### Example
 ```bash
