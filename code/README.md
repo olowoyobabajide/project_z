@@ -15,6 +15,13 @@ FS Analyzer is a static analysis tool designed for security auditing of Android 
 > **Contextual Analysis Required**: These findings represent potential vulnerabilities and patterns that should be cross-referenced with the application's intended purpose. A detection (e.g., use of `system()`) is an indicator of risk, but not necessarily a harmful vulnerability in all contexts.
 
 
+## Installation
+You can install `fs-analyzer` directly using `apt`:
+
+```bash
+sudo apt update && sudo apt install fs-analyzer
+```
+
 ## Prerequisites
 The project uses the following libraries:
 - **libxml2**: Used for parsing Android XML manifests.
@@ -26,22 +33,21 @@ The project uses the following libraries:
 If your system lacks the necessary headers or libraries, you can install them via your package manager:
 
 ```bash
-sudo apt-get update
-sudo apt-get install libxml2-dev libssl-dev libzip-dev pkg-config
+sudo apt update && sudo apt install libxml2-dev libssl-dev libzip-dev pkg-config
 ```
 
 ## Compilation
 To compile the project, use the following `gcc` command from the root directory:
 
 ```bash
-gcc -I. -Isrc -Isrc/dep *.c src/*.c src/dep/*.c -o fs_analyzer $(pkg-config --cflags --libs libxml-2.0) -lssl -lcrypto -lzip
+gcc -I. -Isrc -Isrc/dep *.c src/*.c src/dep/*.c -o fs-analyzer $(pkg-config --cflags --libs libxml-2.0) -lssl -lcrypto -lzip
 ```
 
 ## Usage
 Run the analyzer by providing the path to the source APK file:
 
 ```bash
-./fs_analyzer <path_to_apk> [-d] [-o json <report_file.json>]
+./fs-analyzer <path_to_apk> [-d] [-o json <report_file.json>]
 ```
 
 ### Flags
@@ -52,7 +58,7 @@ Run the analyzer by providing the path to the source APK file:
 
 ### Example
 ```bash
-./fs_analyzer /path/to/apk/JohnDoe.apk -o json report.json
+./fs-analyzer /path/to/apk/JohnDoe.apk -o json report.json
 ```
 
 ## Troubleshooting & Potential Errors

@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2026 olowoyobabajide <olowoyobabajide@gmail.com>
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 #ifndef FLAGHASH_H
 #define FLAGHASH_H
 

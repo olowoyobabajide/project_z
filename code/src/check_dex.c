@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2026 olowoyobabajide <olowoyobabajide@gmail.com>
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 #include "main.h"
 
 static Report *current_report = NULL;

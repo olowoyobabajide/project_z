@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2026 olowoyobabajide <olowoyobabajide@gmail.com>
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 #ifndef MAIN_H
 #define MAIN_H
 

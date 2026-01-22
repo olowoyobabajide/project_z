@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2026 olowoyobabajide <olowoyobabajide@gmail.com>
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 #include "main.h"
 
 char buffer[PATH_MAX];
@@ -11,13 +17,13 @@ int main(int argc, char **argv)
     if(argc < 2)
     {
         printf("Insufficient input\n");
-        printf("Usage: ./fs_analyzer <path> [-d] [-o json <report_file.json>]\n");
+        printf("Usage: ./fs-analyzer <path> [-d] [-o json <report_file.json>]\n");
         return EXIT_FAILURE;
     }
 
     for (int i = 1; i < argc; i++) {
         if(strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0){
-            printf("Usage: ./fs_analyzer <path> [-d] [-o json <report_file.json>]\n\n");
+            printf("Usage: ./fs-analyzer <path> [-d] [-o json <report_file.json>]\n\n");
             printf("Options:\n");
             printf("\t-d: Enable dex log\n");
             printf("\t-o json <report_file.json>: Output report in JSON format\n");
@@ -26,7 +32,7 @@ int main(int argc, char **argv)
             return EXIT_SUCCESS;
         }
         else if(strcmp(argv[i], "--version") == 0 || strcmp(argv[i], "-v") == 0){
-            printf("Version: fs_analyzer 1.0.0\n");
+            printf("Version: fs-analyzer 1.0.0\n");
             return EXIT_SUCCESS;
         } else if (strcmp(argv[i], "-o") == 0) {
             if (i + 2 < argc) {

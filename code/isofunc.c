@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2026 olowoyobabajide <olowoyobabajide@gmail.com>
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 #include "main.h"
 
 void isoFunc(char *so_buf, size_t so_size, const char *filename, Report *r);
