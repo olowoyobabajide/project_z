@@ -224,49 +224,50 @@ void analyseDex(
 
     // Logging Findings
     if(evidence_accessibility) {
-        add_finding(report, FINDING_DEX, rule_info_database[0].category, "CRITICAL", rule_info_database[0].description, "", filename, evidence_accessibility);
+        add_finding(report, FINDING_DEX, rule_info_database[0].category, "CRITICAL", rule_info_database[0].description, "", filename, evidence_accessibility, NULL, 0);
     }
     if(evidence_broadcast_boot) {
-        add_finding(report, FINDING_DEX, rule_info_database[1].category, "CRITICAL", rule_info_database[1].description, "", filename, evidence_broadcast_boot);
+        add_finding(report, FINDING_DEX, rule_info_database[1].category, "CRITICAL", rule_info_database[1].description, "", filename, evidence_broadcast_boot, NULL, 0);
     }
     if(evidence_notification_listener) {
-        add_finding(report, FINDING_DEX, rule_info_database[2].category, "CRITICAL", rule_info_database[2].description, "", filename, evidence_notification_listener);
+        add_finding(report, FINDING_DEX, rule_info_database[2].category, "CRITICAL", rule_info_database[2].description, "", filename, evidence_notification_listener, NULL, 0);
     }
     if(evidence_dex_loader) {
-        add_finding(report, FINDING_DEX, rule_info_database[3].category, "CRITICAL", rule_info_database[3].description, "", filename, evidence_dex_loader);
+        add_finding(report, FINDING_DEX, rule_info_database[3].category, "CRITICAL", rule_info_database[3].description, "", filename, evidence_dex_loader, NULL, 0);
     }
     if(evidence_crypto_file) {
-        add_finding(report, FINDING_DEX, rule_info_database[4].category, "HIGH", rule_info_database[4].description, "", filename, evidence_crypto_file);
+        add_finding(report, FINDING_DEX, rule_info_database[4].category, "HIGH", rule_info_database[4].description, "", filename, evidence_crypto_file, NULL, 0);
     }
     if(evidence_camera_mic_socket) {
-        add_finding(report, FINDING_DEX, rule_info_database[5].category, "HIGH", rule_info_database[5].description, "", filename, evidence_camera_mic_socket);
+        add_finding(report, FINDING_DEX, rule_info_database[5].category, "HIGH", rule_info_database[5].description, "", filename, evidence_camera_mic_socket, NULL, 0);
     }
     if(evidence_reflection_exec) {
-        add_finding(report, FINDING_DEX, rule_info_database[6].category, "HIGH", rule_info_database[6].description, "", filename, evidence_reflection_exec);
+        add_finding(report, FINDING_DEX, rule_info_database[6].category, "HIGH", rule_info_database[6].description, "", filename, evidence_reflection_exec, NULL, 0);
     }
     if(evidence_emulator_check) {
-        add_finding(report, FINDING_DEX, rule_info_database[7].category, "HIGH", rule_info_database[7].description, "", filename, evidence_emulator_check);
+        add_finding(report, FINDING_DEX, rule_info_database[7].category, "HIGH", rule_info_database[7].description, "", filename, evidence_emulator_check, NULL, 0);
     }
     if(evidence_runtime_exec) {
-        add_finding(report, FINDING_DEX, rule_info_database[8].category, "HIGH", rule_info_database[8].description, "", filename, evidence_runtime_exec);
+        const MitreTechnique *mitre_list[] = { &MITRE_T1059 };
+        add_finding(report, FINDING_DEX, rule_info_database[8].category, "HIGH", rule_info_database[8].description, "", filename, evidence_runtime_exec, mitre_list, 1);
     }
     
     if(evidence_usage_stats) {
-        add_finding(report, FINDING_DEX, rule_info_database[10].category, "MEDIUM", rule_info_database[10].description, "", filename, evidence_usage_stats);
+        add_finding(report, FINDING_DEX, rule_info_database[10].category, "MEDIUM", rule_info_database[10].description, "", filename, evidence_usage_stats, NULL, 0);
     }
     if(evidence_clipboard) {
-        add_finding(report, FINDING_DEX, rule_info_database[11].category, "MEDIUM", rule_info_database[11].description, "", filename, evidence_clipboard);
+        add_finding(report, FINDING_DEX, rule_info_database[11].category, "MEDIUM", rule_info_database[11].description, "", filename, evidence_clipboard, NULL, 0);
     }
     if(evidence_log_secrets) {
-        add_finding(report, FINDING_DEX, rule_info_database[12].category, "MEDIUM", rule_info_database[12].description, "", filename, evidence_log_secrets);
+        add_finding(report, FINDING_DEX, rule_info_database[12].category, "MEDIUM", rule_info_database[12].description, "", filename, evidence_log_secrets, NULL, 0);
     }
     if(evidence_js_interface) {
-        add_finding(report, FINDING_DEX, rule_info_database[13].category, "MEDIUM", rule_info_database[13].description, "", filename, evidence_js_interface);
+        add_finding(report, FINDING_DEX, rule_info_database[13].category, "MEDIUM", rule_info_database[13].description, "", filename, evidence_js_interface, NULL, 0);
     }
     if(evidence_sms_manager) {
-        add_finding(report, FINDING_DEX, rule_info_database[14].category, "MEDIUM", rule_info_database[14].description, "", filename, evidence_sms_manager);
+        add_finding(report, FINDING_DEX, rule_info_database[14].category, "MEDIUM", rule_info_database[14].description, "", filename, evidence_sms_manager, NULL, 0);
     }
     if(evidence_root) {
-        add_finding(report, FINDING_DEX, rule_info_database[15].category, "MEDIUM", rule_info_database[15].description, "", filename, evidence_root);
+        add_finding(report, FINDING_DEX, rule_info_database[15].category, "MEDIUM", rule_info_database[15].description, "", filename, evidence_root, NULL, 0);
     }
 }

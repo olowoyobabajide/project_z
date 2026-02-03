@@ -69,7 +69,8 @@ void report_elf_stats(Report *r) {
     if (unsafe_calls_count > 0) {
         char details[64];
         snprintf(details, sizeof(details), "Found %u potential unsafe signal/IO calls", unsafe_calls_count);
-        add_finding(r, FINDING_ELF, "Legacy Unsafe Functions", "LOW", "The binary contains calls to functions that are often associated with security vulnerabilities (e.g., strcpy, sprintf).", details, "Multiple SO files", "");
+        const MitreTechnique *mitre_list[] = { &MITRE_T1203 };
+        add_finding(r, FINDING_ELF, "Legacy Unsafe Functions", "LOW", "The binary contains calls to functions that are often associated with security vulnerabilities (e.g., strcpy, sprintf).", details, "Multiple SO files", "", mitre_list, 1);
     }
 }
 
@@ -244,7 +245,7 @@ int regex_scan(char *buffer, const char *filename, Report *r){
         }
         reg = regexec(&reg_x, buffer, 0, NULL, 0);
         if(reg == 0){
-            add_finding(r, FINDING_ELF, SECRET_PATTERNS[i].secret_type, "HIGH", "Hardcoded secret detected in shared object", "", filename, SECRET_PATTERNS[i].regex_pattern);
+            add_finding(r, FINDING_ELF, SECRET_PATTERNS[i].secret_type, "HIGH", "Hardcoded secret detected in shared object", "", filename, SECRET_PATTERNS[i].regex_pattern, NULL, 0);
         }
         regfree(&reg_x);
     }  
@@ -262,7 +263,7 @@ int regex_command(char *buffer, char* section_name, const char *filename, Report
         if(reg == 0){
             char risk[16];
             snprintf(risk, sizeof(risk), "%s", VULNERABILITY_PATTERNS[i].severity == CRITICAL ? "CRITICAL" : "HIGH");
-            add_finding(r, FINDING_ELF, VULNERABILITY_PATTERNS[i].vulnerability_name, risk, "Potentially dangerous command string detected", section_name, filename, VULNERABILITY_PATTERNS[i].regex_pattern);
+            add_finding(r, FINDING_ELF, VULNERABILITY_PATTERNS[i].vulnerability_name, risk, "Potentially dangerous command string detected", section_name, filename, VULNERABILITY_PATTERNS[i].regex_pattern, NULL, 0);
         }
         regfree(&reg_x);
     }

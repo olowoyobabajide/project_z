@@ -11,6 +11,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "src/mitre.h"
+
+#include "src/mitre.h"
+
 typedef enum {
     FINDING_PERMISSION,
     FINDING_ACTIVITY,
@@ -23,6 +27,12 @@ typedef enum {
     FINDING_UNKNOWN
 } FindingType;
 
+typedef struct {
+    char *id;
+    char *name;
+    char *reason;
+} MitreInfo;
+
 typedef struct Finding {
     FindingType type;
     char *name;
@@ -31,6 +41,11 @@ typedef struct Finding {
     char *details; // Extra info like "Exported: true"
     char *source_file; // The file where finding was found (e.g. classes.dex)
     char *evidence; // The specific string/code that triggered the finding
+    
+    // MITRE Support
+    MitreInfo *mitre_info; // Array of MITRE Info structs
+    int mitre_count;
+
     struct Finding *next;
 } Finding;
 
@@ -41,7 +56,7 @@ typedef struct {
 } Report;
 
 Report* init_report();
-void add_finding(Report *r, FindingType type, const char *name, const char *risk, const char *reason, const char *details, const char *source_file, const char *evidence);
+void add_finding(Report *r, FindingType type, const char *name, const char *risk, const char *reason, const char *details, const char *source_file, const char *evidence, const MitreTechnique **mitre_techniques, int mitre_count);
 void save_report_json(Report *r, const char *filename);
 void free_report(Report *r);
 

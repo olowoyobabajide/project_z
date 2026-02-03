@@ -22,7 +22,7 @@ static char* safe_strdup(const char *s) {
     return s ? strdup(s) : strdup("");
 }
 
-void add_finding(Report *r, FindingType type, const char *name, const char *risk, const char *reason, const char *details, const char *source_file, const char *evidence) {
+void add_finding(Report *r, FindingType type, const char *name, const char *risk, const char *reason, const char *details, const char *source_file, const char *evidence, const MitreTechnique **mitre_techniques, int mitre_count) {
     if (!r) return;
 
     Finding *f = (Finding*)malloc(sizeof(Finding));
@@ -33,6 +33,24 @@ void add_finding(Report *r, FindingType type, const char *name, const char *risk
     f->details = safe_strdup(details);
     f->source_file = safe_strdup(source_file);
     f->evidence = safe_strdup(evidence);
+    f->mitre_count = mitre_count;
+    f->mitre_info = NULL;
+
+    if (mitre_count > 0 && mitre_techniques) {
+        f->mitre_info = (MitreInfo*)malloc(sizeof(MitreInfo) * mitre_count);
+        for (int i = 0; i < mitre_count; i++) {
+            if (mitre_techniques[i]) {
+                f->mitre_info[i].id = safe_strdup(mitre_techniques[i]->technique_id);
+                f->mitre_info[i].name = safe_strdup(mitre_techniques[i]->name);
+                f->mitre_info[i].reason = safe_strdup(mitre_techniques[i]->reason);
+            } else {
+                f->mitre_info[i].id = safe_strdup("");
+                f->mitre_info[i].name = safe_strdup("");
+                f->mitre_info[i].reason = safe_strdup("");
+            }
+        }
+    }
+
     f->next = NULL;
 
     if (r->tail) {
@@ -124,7 +142,29 @@ void save_report_json(Report *r, const char *filename) {
         fprintf(f, "      \"reason\": \"%s\",\n", esc_reason);
         fprintf(f, "      \"source_file\": \"%s\",\n", esc_source);
         fprintf(f, "      \"evidence\": \"%s\",\n", esc_evidence);
-        fprintf(f, "      \"details\": \"%s\"\n", esc_details);
+        fprintf(f, "      \"details\": \"%s\",\n", esc_details);
+
+        fprintf(f, "      \"mitre\": [");
+        if (current->mitre_count > 0 && current->mitre_info) {
+            for (int i = 0; i < current->mitre_count; i++) {
+                char *esc_id = json_escape(current->mitre_info[i].id);
+                char *esc_mitre_name = json_escape(current->mitre_info[i].name);
+                char *esc_mitre_reason = json_escape(current->mitre_info[i].reason);
+                
+                if (i > 0) fprintf(f, ",");
+                fprintf(f, "\n        {\n");
+                fprintf(f, "          \"id\": \"%s\",\n", esc_id);
+                fprintf(f, "          \"name\": \"%s\",\n", esc_mitre_name);
+                fprintf(f, "          \"reason\": \"%s\"\n", esc_mitre_reason);
+                fprintf(f, "        }");
+
+                free(esc_id);
+                free(esc_mitre_name);
+                free(esc_mitre_reason);
+            }
+            fprintf(f, "\n      ");
+        }
+        fprintf(f, "]\n");
         
         fprintf(f, "    }%s\n", current->next ? "," : "");
 
@@ -155,6 +195,16 @@ void free_report(Report *r) {
         free(current->details);
         free(current->source_file);
         free(current->evidence);
+        
+        if (current->mitre_info) {
+            for (int i = 0; i < current->mitre_count; i++) {
+                free(current->mitre_info[i].id);
+                free(current->mitre_info[i].name);
+                free(current->mitre_info[i].reason);
+            }
+            free((void*)current->mitre_info);
+        }
+
         free(current);
         current = next;
     }

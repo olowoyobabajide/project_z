@@ -99,7 +99,7 @@ void verifyHashMemory(unsigned char *data, size_t size, char *filename, Report *
 
     for(uint32_t md5_count = 0; md5_count < count_md5; md5_count++){
         if(strcmp(md5_string, threatmd5.hash[md5_count]) == 0){
-            add_finding(r, FINDING_HASH, "MD5 Threat Match", "CRITICAL", "File hash matches a known threat signature.", "MD5", filename, md5_string);
+            add_finding(r, FINDING_HASH, "MD5 Threat Match", "CRITICAL", "File hash matches a known threat signature.", "MD5", filename, md5_string, NULL, 0);
         }
     }
 
@@ -117,7 +117,7 @@ void verifyHashMemory(unsigned char *data, size_t size, char *filename, Report *
 
     for(int sha_count = 0; sha_count < count_sha1; sha_count++){
         if(strcmp(sha1_string, threatsha1.hash[sha_count]) == 0){
-            add_finding(r, FINDING_HASH, "SHA1 Threat Match", "CRITICAL", "File hash matches a known threat signature.", "SHA1", filename, sha1_string);
+            add_finding(r, FINDING_HASH, "SHA1 Threat Match", "CRITICAL", "File hash matches a known threat signature.", "SHA1", filename, sha1_string, NULL, 0);
         }
     }
 
@@ -134,7 +134,7 @@ void verifyHashMemory(unsigned char *data, size_t size, char *filename, Report *
     sha256_string[64] = '\0';
     for(int sha_count = 0; sha_count < count_sha256; sha_count++){
         if(strcmp(sha256_string, threatsha256.hash[sha_count]) == 0){
-            add_finding(r, FINDING_HASH, "SHA256 Threat Match", "CRITICAL", "File hash matches a known threat signature.", "SHA256", filename, sha256_string);
+            add_finding(r, FINDING_HASH, "SHA256 Threat Match", "CRITICAL", "File hash matches a known threat signature.", "SHA256", filename, sha256_string, NULL, 0);
         }
     }
 

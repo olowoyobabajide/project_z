@@ -47,7 +47,16 @@ rperm rperms[] = {{"android.permission.READ_SMS","\nRisk Level: DANGEROUS\nReaso
 {"android.permission.REQUEST_INSTALL_PACKAGES","\nRisk Level: MODERATE\nReason: Can install new apps from unknown sources\n-------\n"},
 {"android.permission.VIBRATE","\nRisk Level: LOW\nReason: Used to trigger vibrations; no access to sensitive data\n-------\n"},
 {"android.permission.WAKE_LOCK","\nRisk Level: LOW,Keeps screen awake; minor battery risk, no data access\n-------\n"},
-{"android.permission.RECEIVE_BOOT_COMPLETED","\nRisk Level: MODERATE\nReason: Starts app after boot; can be used for stealthy persistence\n-------\n"}
+{"android.permission.RECEIVE_BOOT_COMPLETED","\nRisk Level: MODERATE\nReason: Starts app after boot; can be used for stealthy persistence\n-------\n"},
+{"android.permission.ACCESS_NETWORK_STATE","\nRisk Level: LOW\nReason: Allows applications to access information about networks\n-------\n"},
+{"android.permission.ACCESS_WIFI_STATE","\nRisk Level: LOW\nReason: Allows applications to access information about Wi-Fi networks\n-------\n"},
+{"android.permission.BLUETOOTH","\nRisk Level: LOW\nReason: Allows applications to connect to paired bluetooth devices\n-------\n"},
+{"android.permission.CHANGE_WIFI_MULTICAST_STATE","\nRisk Level: LOW\nReason: Allows applications to enter Wi-Fi Multicast mode\n-------\n"},
+{"android.permission.MODIFY_AUDIO_SETTINGS","\nRisk Level: LOW\nReason: Allows applications to modify global audio settings\n-------\n"},
+{"android.permission.RUN_USER_INITIATED_JOBS","\nRisk Level: LOW\nReason: Allows applications to run user-initiated jobs\n-------\n"},
+{"android.permission.POST_NOTIFICATIONS","\nRisk Level: LOW\nReason: Allows applications to post notifications (Android 13+)\n-------\n"},
+{"android.permission.FOREGROUND_SERVICE","\nRisk Level: MODERATE\nReason: Allows app to use foreground services; potential for persistence\n-------\n"},
+{"android.permission.FOREGROUND_SERVICE_DATA_SYNC","\nRisk Level: MODERATE\nReason: Allows data synchronization using foreground services\n-------\n"},
     };
 
 size_t NUM_PERMISSIONS = sizeof(rperms)/sizeof(rperm);
@@ -130,7 +139,7 @@ void parseActivity(xmlDocPtr doc, xmlNodePtr cur, Report *r)
     }
 
     if (is_exported && perm == NULL) {
-        add_finding(r, FINDING_ACTIVITY, (char*)activityName, "HIGH", "Activity is exported but not protected by any permission.", "Exported without permission", "AndroidManifest.xml", (char*)activityName);
+        add_finding(r, FINDING_ACTIVITY, (char*)activityName, "HIGH", "Activity is exported but not protected by any permission.", "Exported without permission", "AndroidManifest.xml", (char*)activityName, NULL, 0);
     }
 
     if (activityName) xmlFree(activityName);
@@ -147,7 +156,7 @@ void parseService(xmlDocPtr doc, xmlNodePtr cur, Report *r)
     int is_exported = (exported && !xmlStrcmp(exported, (const xmlChar*)"true"));
 
     if (is_exported && permission == NULL) {
-        add_finding(r, FINDING_SERVICE, (char*)serviceName, "HIGH", "Service is exported but not protected by any permission.", "Exported without permission", "AndroidManifest.xml", (char*)serviceName);
+        add_finding(r, FINDING_SERVICE, (char*)serviceName, "HIGH", "Service is exported but not protected by any permission.", "Exported without permission", "AndroidManifest.xml", (char*)serviceName, NULL, 0);
     }
 
     if (serviceName) xmlFree(serviceName);
@@ -164,7 +173,7 @@ void parseReceiver(xmlDocPtr doc, xmlNodePtr cur, Report *r)
     int is_exported = (export && !xmlStrcmp(export, (const xmlChar*)"true"));
 
     if (is_exported && checkPermission == NULL) {
-        add_finding(r, FINDING_RECEIVER, (char*)receiverName, "HIGH", "Broadcast Receiver is exported but not protected by any permission.", "Exported without permission", "AndroidManifest.xml", (char*)receiverName);
+        add_finding(r, FINDING_RECEIVER, (char*)receiverName, "HIGH", "Broadcast Receiver is exported but not protected by any permission.", "Exported without permission", "AndroidManifest.xml", (char*)receiverName, NULL, 0);
     }
 
     if (receiverName) xmlFree(receiverName);
@@ -184,10 +193,10 @@ void parseProvider(xmlDocPtr doc, xmlNodePtr cur, Report *r)
 
     if (is_exported) {
         if (readPermission == NULL || writePermission == NULL) {
-             add_finding(r, FINDING_PROVIDER, (char*)providerName, "HIGH", "Content Provider is exported but lacks read or write permissions.", "Exported with missing permissions", "AndroidManifest.xml", (char*)providerName);
+             add_finding(r, FINDING_PROVIDER, (char*)providerName, "HIGH", "Content Provider is exported but lacks read or write permissions.", "Exported with missing permissions", "AndroidManifest.xml", (char*)providerName, NULL, 0);
         }
         if (grantUri && !xmlStrcmp(grantUri, (const xmlChar*)"true")) {
-             add_finding(r, FINDING_PROVIDER, (char*)providerName, "MEDIUM", "Content Provider allows URI permission granting, which can be risky.", "grantUriPermissions=true", "AndroidManifest.xml", (char*)providerName);
+             add_finding(r, FINDING_PROVIDER, (char*)providerName, "MEDIUM", "Content Provider allows URI permission granting, which can be risky.", "grantUriPermissions=true", "AndroidManifest.xml", (char*)providerName, NULL, 0);
         }
     }
 
@@ -203,7 +212,7 @@ void parsePermission(xmlDocPtr doc, xmlNodePtr cur, Report *r){
     if (permission != NULL) {
         for (int i = 0; i < NUM_PERMISSIONS; i++) {
             if (strcmp(rperms[i].name, (char*)permission) == 0) {
-                add_finding(r, FINDING_PERMISSION, (char*)permission, rperms[i].level, "Requested in Manifest", "", "AndroidManifest.xml", (char*)permission);
+                add_finding(r, FINDING_PERMISSION, (char*)permission, rperms[i].level, "Requested in Manifest", "", "AndroidManifest.xml", (char*)permission, NULL, 0);
             }
         }
     }
