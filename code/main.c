@@ -21,10 +21,6 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    if (fnmatch("*.apk", basename(argv[1]), FNM_PATHNAME) != 0){
-        printf("Input is not an apk file\n");
-        return EXIT_FAILURE;
-    }
     for (int i = 1; i < argc; i++) {
         if(strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0){
             printf("Usage: ./fs-analyzer <path> [-d] [-o json <report_file.json>]\n\n");
@@ -36,7 +32,7 @@ int main(int argc, char **argv)
             return EXIT_SUCCESS;
         }
         else if(strcmp(argv[i], "--version") == 0 || strcmp(argv[i], "-v") == 0){
-            printf("Version: fs-analyzer 1.1.0\n");
+            printf("Version: fs-analyzer 1.1.1\n");
             return EXIT_SUCCESS;
         } else if (strcmp(argv[i], "-o") == 0) {
             if (i + 2 < argc) {
@@ -62,6 +58,10 @@ int main(int argc, char **argv)
 
     if (!input_path) {
         printf("No input path provided.\n");
+        return EXIT_FAILURE;
+    }
+     if (fnmatch("*.apk", basename(argv[1]), FNM_PATHNAME) != 0){
+        printf("Input is not an apk file\n");
         return EXIT_FAILURE;
     }
 
@@ -97,5 +97,4 @@ int main(int argc, char **argv)
         free_report(report);
     }
     
-
 }
